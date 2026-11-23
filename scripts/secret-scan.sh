@@ -9,11 +9,7 @@ ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 SECRETS_FILE=".private/secrets.env"
 MODE="${1:---staged}"
-SECRET_KEYS="PROXMOX_TOKEN_SECRET GITLAB_TOKEN DOCKERHUB_TOKEN"
-# The VM password is submitted to the examiners in README.md, as the brief requires ("VM login credentials").
-# It is allowed in that one file only and blocked everywhere else.
-SUBMITTED_KEY="VM_PASSWORD"
-SUBMITTED_FILE="README.md"
+SECRET_KEYS="PROXMOX_TOKEN_SECRET GITLAB_TOKEN DOCKERHUB_TOKEN VM_PASSWORD"
 SHAPE_REGEX='glpat-[A-Za-z0-9_.-]{20,}|PVEAPIToken[=][^[:space:]]+|BEGIN (OPENSSH|RSA|EC|DSA) PRIVATE KEY'
 
 if [[ ! -f "$SECRETS_FILE" ]]; then
@@ -35,14 +31,6 @@ for key in $SECRET_KEYS; do
   printf '%s\n' "$value" >>"$LITERALS"
   count=$((count + 1))
 done
-
-SUBMITTED="$TMPDIR_SCAN/submitted"
-: >"$SUBMITTED"
-value="$(grep -E "^${SUBMITTED_KEY}=" "$SECRETS_FILE" | head -1 | cut -d= -f2- | tr -d "'\"" || true)"
-if [[ -n "$value" && "$value" != \<* ]]; then
-  printf '%s\n' "$value" >"$SUBMITTED"
-  count=$((count + 1))
-fi
 
 # Application secrets generated into docker/.env (also used for the Kubernetes Secret and the Helm release).
 APP_ENV_FILE="docker/.env"
@@ -82,19 +70,12 @@ case "$MODE" in
   --staged)
     ADDED="$(git diff --cached -U0 --no-color | grep -E '^\+' | grep -v '^+++' || true)"
     check_text "staged changes" "$ADDED"
-    if [[ -s "$SUBMITTED" ]]; then
-      OTHER="$(git diff --cached -U0 --no-color -- . ":(exclude)$SUBMITTED_FILE" | grep -E '^\+' | grep -v '^+++' || true)"
-      printf '%s\n' "$OTHER" | grep -F -q -f "$SUBMITTED" && report "staged changes outside $SUBMITTED_FILE contain the VM password (redacted)" || true
-    fi
     ;;
   --tree)
     while IFS= read -r f; do
       [[ -f "$f" ]] || continue
       grep -I -F -q -f "$LITERALS" "$f" && report "$f contains a configured secret value (redacted)" || true
       grep -I -E -q -- "$SHAPE_REGEX" "$f" && report "$f contains a secret-shaped token (redacted)" || true
-      if [[ -s "$SUBMITTED" && "$f" != "$SUBMITTED_FILE" ]]; then
-        grep -I -F -q -f "$SUBMITTED" "$f" && report "$f contains the VM password outside $SUBMITTED_FILE (redacted)" || true
-      fi
     done < <(git ls-files --cached --others --exclude-standard)
     ;;
   --history)
@@ -102,10 +83,6 @@ case "$MODE" in
     git log --all -p --no-color >"$HISTORY_FILE"
     grep -F -q -f "$LITERALS" "$HISTORY_FILE" && report "git history contains a configured secret value (redacted)" || true
     grep -E -q -- "$SHAPE_REGEX" "$HISTORY_FILE" && report "git history contains a secret-shaped token (redacted)" || true
-    if [[ -s "$SUBMITTED" ]]; then
-      git log --all -p --no-color -- . ":(exclude)$SUBMITTED_FILE" | grep -F -q -f "$SUBMITTED" \
-        && report "git history outside $SUBMITTED_FILE contains the VM password (redacted)" || true
-    fi
     ;;
   *)
     echo "usage: $0 [--staged|--tree|--history]" >&2

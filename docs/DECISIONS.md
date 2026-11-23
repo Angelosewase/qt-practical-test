@@ -36,7 +36,7 @@ Every value that could change lives in `variables.tf`. The four VMs are one map 
 
 ## D5. Access model
 
-- One user, `devops`, created by cloud-init with the key from `.private/ssh/id_ed25519.pub` and the VM password. The password is given to the examiners in the README.
+- One user, `devops`, created by cloud-init with the key from `.private/ssh/id_ed25519.pub` and the VM password. The login details are sent to the examiners separately, not stored in the repository.
 - The API token is used with the least privilege Proxmox allows. Its permissions are not ours to change.
 
 ## D6. insecure = true
@@ -477,6 +477,6 @@ The three candidates were NGINX Gateway Fabric, Envoy Gateway and Traefik. Etcd 
 
 `scripts/gateway-deploy.sh` waits for `/readyz` to answer `ok` three times in a row before each step (CRDs, controller, routes) and stops if the API server does not settle. The preconditions were checked first: `/readyz` ok three times in a row, master memory 20% (limit 80%), and 0 etcd slow writes in the previous 10 minutes. The install (14:19:36 to 14:20:22 UTC) caused one etcd slow write and no control-plane restarts, and `/readyz` stayed ok. `make gateway-uninstall` removes the routes, then the controller, then the CRDs, if the cluster ever needs the load back. Evidence: `monitoring/bonus-evidence.txt` §7.
 
-## D-SEC-2. The VM password is allowed in README.md only
+## D-SEC-2. VM credentials are delivered outside the repository
 
-The brief requires the VM login credentials in the submission, so the `devops` password is in the README. `scripts/secret-scan.sh` treats `VM_PASSWORD` as a submitted credential: it is allowed in `README.md` and still reported in any other file, in staged changes outside the README, and anywhere in history outside the README. The Proxmox token, the GitLab and Docker Hub tokens and the application secrets stay blocked everywhere.
+The brief requires the VM login details in the submission. They are sent to the examiners with the submission instead of being committed, because the repository is public. `scripts/secret-scan.sh` treats the VM password like every other secret: any tracked file, staged change or commit that contains it is reported.
