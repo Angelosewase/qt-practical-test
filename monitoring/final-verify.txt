@@ -1,179 +1,175 @@
-# Final functional verification (scripts/verify.sh), generated 2026-11-23T13:01:08Z
+# Final functional verification (scripts/verify.sh), generated 2026-11-23T13:29:13Z
 # Browser-style: browser User-Agent, page routes, Origin on every write, unlisted-origin refusal. No secrets.
-# Test accounts are created by the app on first start (README). Same run format as monitoring/origin-bug/verify-browser-after-fix.txt.
+# Test accounts are created by the app on first start (README). The Helm copy on port 30081 is checked in monitoring/bonus-evidence.txt.
 
 ## http://192.168.160.11
-2026-11-23T13:01:08Z verify.sh against http://192.168.160.11 (run 1795438868)
-2026-11-23T13:01:08Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:08Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:08Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:08Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:08Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:08Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
-2026-11-23T13:01:08Z PASS api health returns 200 (HTTP 200)
-2026-11-23T13:01:08Z PASS api health reports database up 
-2026-11-23T13:01:08Z PASS api health reports cache state (cache=up)
-2026-11-23T13:01:09Z PASS register user A (HTTP 201)
-2026-11-23T13:01:09Z PASS register user B (HTTP 201)
-2026-11-23T13:01:09Z PASS login user A (HTTP 200)
-2026-11-23T13:01:09Z PASS login with wrong password is rejected (HTTP 401)
-2026-11-23T13:01:09Z PASS auth/me for user A (HTTP 200)
-2026-11-23T13:01:09Z PASS auth/me returns user A's email 
-2026-11-23T13:01:09Z PASS projects without a token is rejected (HTTP 401)
-2026-11-23T13:01:09Z PASS login seeded manager (HTTP 200)
-2026-11-23T13:01:10Z PASS login seeded admin (HTTP 200)
-2026-11-23T13:01:10Z PASS member cannot create a project (role rule) (HTTP 403)
-2026-11-23T13:01:10Z PASS manager creates a project (HTTP 201)
-2026-11-23T13:01:10Z PASS manager creates a task in the project (HTTP 201)
-2026-11-23T13:01:10Z PASS manager lists projects (HTTP 200)
-2026-11-23T13:01:10Z PASS project appears in manager's list 
-2026-11-23T13:01:10Z PASS manager lists tasks of the project (HTTP 200)
-2026-11-23T13:01:10Z PASS task appears in the project's list 
-2026-11-23T13:01:10Z PASS user A lists projects (HTTP 200)
-2026-11-23T13:01:10Z PASS user A does not see the manager's project 
-2026-11-23T13:01:10Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
-2026-11-23T13:01:10Z PASS user A cannot list the project's tasks (HTTP 404)
-2026-11-23T13:01:10Z PASS user A cannot change the task (HTTP 404)
-2026-11-23T13:01:10Z PASS user B does not see the project 
-2026-11-23T13:01:10Z PASS manager adds user A to the project (HTTP 200)
-2026-11-23T13:01:10Z PASS user A now sees the shared project 
-2026-11-23T13:01:10Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
-2026-11-23T13:01:10Z PASS user B still cannot open the project after sharing with A (HTTP 404)
-2026-11-23T13:01:10Z PASS admin sees every project (documented rule) 
-2026-11-23T13:01:11Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
-2026-11-23T13:01:11Z PASS manager deletes the test project (HTTP 204)
-2026-11-23T13:01:11Z PASS deleted project is gone (HTTP 404)
-2026-11-23T13:01:11Z SUMMARY passed=39 failed=0
-exit=0
+2026-11-23T13:29:13Z verify.sh against http://192.168.160.11 (run 1795440553)
+2026-11-23T13:29:13Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:13Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:13Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:13Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:13Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:13Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
+2026-11-23T13:29:13Z PASS api health returns 200 (HTTP 200)
+2026-11-23T13:29:13Z PASS api health reports database up 
+2026-11-23T13:29:13Z PASS api health reports cache state (cache=up)
+2026-11-23T13:29:14Z PASS register user A (HTTP 201)
+2026-11-23T13:29:14Z PASS register user B (HTTP 201)
+2026-11-23T13:29:14Z PASS login user A (HTTP 200)
+2026-11-23T13:29:14Z PASS login with wrong password is rejected (HTTP 401)
+2026-11-23T13:29:14Z PASS auth/me for user A (HTTP 200)
+2026-11-23T13:29:14Z PASS auth/me returns user A's email 
+2026-11-23T13:29:14Z PASS projects without a token is rejected (HTTP 401)
+2026-11-23T13:29:15Z PASS login seeded manager (HTTP 200)
+2026-11-23T13:29:15Z PASS login seeded admin (HTTP 200)
+2026-11-23T13:29:15Z PASS member cannot create a project (role rule) (HTTP 403)
+2026-11-23T13:29:15Z PASS manager creates a project (HTTP 201)
+2026-11-23T13:29:15Z PASS manager creates a task in the project (HTTP 201)
+2026-11-23T13:29:15Z PASS manager lists projects (HTTP 200)
+2026-11-23T13:29:15Z PASS project appears in manager's list 
+2026-11-23T13:29:15Z PASS manager lists tasks of the project (HTTP 200)
+2026-11-23T13:29:15Z PASS task appears in the project's list 
+2026-11-23T13:29:15Z PASS user A lists projects (HTTP 200)
+2026-11-23T13:29:15Z PASS user A does not see the manager's project 
+2026-11-23T13:29:15Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
+2026-11-23T13:29:15Z PASS user A cannot list the project's tasks (HTTP 404)
+2026-11-23T13:29:15Z PASS user A cannot change the task (HTTP 404)
+2026-11-23T13:29:16Z PASS user B does not see the project 
+2026-11-23T13:29:16Z PASS manager adds user A to the project (HTTP 200)
+2026-11-23T13:29:16Z PASS user A now sees the shared project 
+2026-11-23T13:29:16Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
+2026-11-23T13:29:16Z PASS user B still cannot open the project after sharing with A (HTTP 404)
+2026-11-23T13:29:16Z PASS admin sees every project (documented rule) 
+2026-11-23T13:29:16Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
+2026-11-23T13:29:16Z PASS manager deletes the test project (HTTP 204)
+2026-11-23T13:29:16Z PASS deleted project is gone (HTTP 404)
+2026-11-23T13:29:16Z SUMMARY passed=39 failed=0
 
 ## http://192.168.160.17:30080
-2026-11-23T13:01:11Z verify.sh against http://192.168.160.17:30080 (run 1795438871)
-2026-11-23T13:01:11Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:11Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:11Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:11Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:11Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:11Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
-2026-11-23T13:01:11Z PASS api health returns 200 (HTTP 200)
-2026-11-23T13:01:11Z PASS api health reports database up 
-2026-11-23T13:01:11Z PASS api health reports cache state (cache=up)
-2026-11-23T13:01:11Z PASS register user A (HTTP 201)
-2026-11-23T13:01:11Z PASS register user B (HTTP 201)
-2026-11-23T13:01:12Z PASS login user A (HTTP 200)
-2026-11-23T13:01:12Z PASS login with wrong password is rejected (HTTP 401)
-2026-11-23T13:01:12Z PASS auth/me for user A (HTTP 200)
-2026-11-23T13:01:12Z PASS auth/me returns user A's email 
-2026-11-23T13:01:12Z PASS projects without a token is rejected (HTTP 401)
-2026-11-23T13:01:12Z PASS login seeded manager (HTTP 200)
-2026-11-23T13:01:12Z PASS login seeded admin (HTTP 200)
-2026-11-23T13:01:12Z PASS member cannot create a project (role rule) (HTTP 403)
-2026-11-23T13:01:12Z PASS manager creates a project (HTTP 201)
-2026-11-23T13:01:13Z PASS manager creates a task in the project (HTTP 201)
-2026-11-23T13:01:13Z PASS manager lists projects (HTTP 200)
-2026-11-23T13:01:13Z PASS project appears in manager's list 
-2026-11-23T13:01:13Z PASS manager lists tasks of the project (HTTP 200)
-2026-11-23T13:01:13Z PASS task appears in the project's list 
-2026-11-23T13:01:13Z PASS user A lists projects (HTTP 200)
-2026-11-23T13:01:13Z PASS user A does not see the manager's project 
-2026-11-23T13:01:13Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
-2026-11-23T13:01:13Z PASS user A cannot list the project's tasks (HTTP 404)
-2026-11-23T13:01:13Z PASS user A cannot change the task (HTTP 404)
-2026-11-23T13:01:13Z PASS user B does not see the project 
-2026-11-23T13:01:13Z PASS manager adds user A to the project (HTTP 200)
-2026-11-23T13:01:13Z PASS user A now sees the shared project 
-2026-11-23T13:01:13Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
-2026-11-23T13:01:13Z PASS user B still cannot open the project after sharing with A (HTTP 404)
-2026-11-23T13:01:13Z PASS admin sees every project (documented rule) 
-2026-11-23T13:01:13Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
-2026-11-23T13:01:13Z PASS manager deletes the test project (HTTP 204)
-2026-11-23T13:01:13Z PASS deleted project is gone (HTTP 404)
-2026-11-23T13:01:13Z SUMMARY passed=39 failed=0
-exit=0
+2026-11-23T13:29:16Z verify.sh against http://192.168.160.17:30080 (run 1795440556)
+2026-11-23T13:29:16Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:16Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:16Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:16Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:16Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:17Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
+2026-11-23T13:29:17Z PASS api health returns 200 (HTTP 200)
+2026-11-23T13:29:17Z PASS api health reports database up 
+2026-11-23T13:29:17Z PASS api health reports cache state (cache=up)
+2026-11-23T13:29:17Z PASS register user A (HTTP 201)
+2026-11-23T13:29:17Z PASS register user B (HTTP 201)
+2026-11-23T13:29:17Z PASS login user A (HTTP 200)
+2026-11-23T13:29:17Z PASS login with wrong password is rejected (HTTP 401)
+2026-11-23T13:29:17Z PASS auth/me for user A (HTTP 200)
+2026-11-23T13:29:17Z PASS auth/me returns user A's email 
+2026-11-23T13:29:17Z PASS projects without a token is rejected (HTTP 401)
+2026-11-23T13:29:18Z PASS login seeded manager (HTTP 200)
+2026-11-23T13:29:18Z PASS login seeded admin (HTTP 200)
+2026-11-23T13:29:18Z PASS member cannot create a project (role rule) (HTTP 403)
+2026-11-23T13:29:18Z PASS manager creates a project (HTTP 201)
+2026-11-23T13:29:18Z PASS manager creates a task in the project (HTTP 201)
+2026-11-23T13:29:18Z PASS manager lists projects (HTTP 200)
+2026-11-23T13:29:18Z PASS project appears in manager's list 
+2026-11-23T13:29:18Z PASS manager lists tasks of the project (HTTP 200)
+2026-11-23T13:29:18Z PASS task appears in the project's list 
+2026-11-23T13:29:18Z PASS user A lists projects (HTTP 200)
+2026-11-23T13:29:18Z PASS user A does not see the manager's project 
+2026-11-23T13:29:18Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
+2026-11-23T13:29:19Z PASS user A cannot list the project's tasks (HTTP 404)
+2026-11-23T13:29:19Z PASS user A cannot change the task (HTTP 404)
+2026-11-23T13:29:19Z PASS user B does not see the project 
+2026-11-23T13:29:19Z PASS manager adds user A to the project (HTTP 200)
+2026-11-23T13:29:19Z PASS user A now sees the shared project 
+2026-11-23T13:29:19Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
+2026-11-23T13:29:19Z PASS user B still cannot open the project after sharing with A (HTTP 404)
+2026-11-23T13:29:19Z PASS admin sees every project (documented rule) 
+2026-11-23T13:29:19Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
+2026-11-23T13:29:19Z PASS manager deletes the test project (HTTP 204)
+2026-11-23T13:29:19Z PASS deleted project is gone (HTTP 404)
+2026-11-23T13:29:19Z SUMMARY passed=39 failed=0
 
 ## http://192.168.160.33:30080
-2026-11-23T13:01:13Z verify.sh against http://192.168.160.33:30080 (run 1795438873)
-2026-11-23T13:01:14Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:14Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:14Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:14Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:14Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:14Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
-2026-11-23T13:01:14Z PASS api health returns 200 (HTTP 200)
-2026-11-23T13:01:14Z PASS api health reports database up 
-2026-11-23T13:01:14Z PASS api health reports cache state (cache=up)
-2026-11-23T13:01:14Z PASS register user A (HTTP 201)
-2026-11-23T13:01:15Z PASS register user B (HTTP 201)
-2026-11-23T13:01:15Z PASS login user A (HTTP 200)
-2026-11-23T13:01:15Z PASS login with wrong password is rejected (HTTP 401)
-2026-11-23T13:01:15Z PASS auth/me for user A (HTTP 200)
-2026-11-23T13:01:15Z PASS auth/me returns user A's email 
-2026-11-23T13:01:15Z PASS projects without a token is rejected (HTTP 401)
-2026-11-23T13:01:15Z PASS login seeded manager (HTTP 200)
-2026-11-23T13:01:15Z PASS login seeded admin (HTTP 200)
-2026-11-23T13:01:15Z PASS member cannot create a project (role rule) (HTTP 403)
-2026-11-23T13:01:16Z PASS manager creates a project (HTTP 201)
-2026-11-23T13:01:16Z PASS manager creates a task in the project (HTTP 201)
-2026-11-23T13:01:16Z PASS manager lists projects (HTTP 200)
-2026-11-23T13:01:16Z PASS project appears in manager's list 
-2026-11-23T13:01:16Z PASS manager lists tasks of the project (HTTP 200)
-2026-11-23T13:01:16Z PASS task appears in the project's list 
-2026-11-23T13:01:16Z PASS user A lists projects (HTTP 200)
-2026-11-23T13:01:16Z PASS user A does not see the manager's project 
-2026-11-23T13:01:16Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
-2026-11-23T13:01:16Z PASS user A cannot list the project's tasks (HTTP 404)
-2026-11-23T13:01:16Z PASS user A cannot change the task (HTTP 404)
-2026-11-23T13:01:16Z PASS user B does not see the project 
-2026-11-23T13:01:16Z PASS manager adds user A to the project (HTTP 200)
-2026-11-23T13:01:16Z PASS user A now sees the shared project 
-2026-11-23T13:01:16Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
-2026-11-23T13:01:17Z PASS user B still cannot open the project after sharing with A (HTTP 404)
-2026-11-23T13:01:17Z PASS admin sees every project (documented rule) 
-2026-11-23T13:01:17Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
-2026-11-23T13:01:17Z PASS manager deletes the test project (HTTP 204)
-2026-11-23T13:01:17Z PASS deleted project is gone (HTTP 404)
-2026-11-23T13:01:17Z SUMMARY passed=39 failed=0
-exit=0
+2026-11-23T13:29:19Z verify.sh against http://192.168.160.33:30080 (run 1795440559)
+2026-11-23T13:29:19Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:19Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:19Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:19Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:20Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:20Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
+2026-11-23T13:29:20Z PASS api health returns 200 (HTTP 200)
+2026-11-23T13:29:20Z PASS api health reports database up 
+2026-11-23T13:29:20Z PASS api health reports cache state (cache=up)
+2026-11-23T13:29:20Z PASS register user A (HTTP 201)
+2026-11-23T13:29:20Z PASS register user B (HTTP 201)
+2026-11-23T13:29:20Z PASS login user A (HTTP 200)
+2026-11-23T13:29:20Z PASS login with wrong password is rejected (HTTP 401)
+2026-11-23T13:29:21Z PASS auth/me for user A (HTTP 200)
+2026-11-23T13:29:21Z PASS auth/me returns user A's email 
+2026-11-23T13:29:21Z PASS projects without a token is rejected (HTTP 401)
+2026-11-23T13:29:21Z PASS login seeded manager (HTTP 200)
+2026-11-23T13:29:21Z PASS login seeded admin (HTTP 200)
+2026-11-23T13:29:21Z PASS member cannot create a project (role rule) (HTTP 403)
+2026-11-23T13:29:21Z PASS manager creates a project (HTTP 201)
+2026-11-23T13:29:21Z PASS manager creates a task in the project (HTTP 201)
+2026-11-23T13:29:21Z PASS manager lists projects (HTTP 200)
+2026-11-23T13:29:21Z PASS project appears in manager's list 
+2026-11-23T13:29:21Z PASS manager lists tasks of the project (HTTP 200)
+2026-11-23T13:29:21Z PASS task appears in the project's list 
+2026-11-23T13:29:21Z PASS user A lists projects (HTTP 200)
+2026-11-23T13:29:21Z PASS user A does not see the manager's project 
+2026-11-23T13:29:21Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
+2026-11-23T13:29:21Z PASS user A cannot list the project's tasks (HTTP 404)
+2026-11-23T13:29:22Z PASS user A cannot change the task (HTTP 404)
+2026-11-23T13:29:22Z PASS user B does not see the project 
+2026-11-23T13:29:22Z PASS manager adds user A to the project (HTTP 200)
+2026-11-23T13:29:22Z PASS user A now sees the shared project 
+2026-11-23T13:29:22Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
+2026-11-23T13:29:22Z PASS user B still cannot open the project after sharing with A (HTTP 404)
+2026-11-23T13:29:22Z PASS admin sees every project (documented rule) 
+2026-11-23T13:29:22Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
+2026-11-23T13:29:22Z PASS manager deletes the test project (HTTP 204)
+2026-11-23T13:29:22Z PASS deleted project is gone (HTTP 404)
+2026-11-23T13:29:22Z SUMMARY passed=39 failed=0
 
 ## http://192.168.160.98:30080
-2026-11-23T13:01:17Z verify.sh against http://192.168.160.98:30080 (run 1795438877)
-2026-11-23T13:01:17Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:17Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:17Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:17Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:17Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
-2026-11-23T13:01:17Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
-2026-11-23T13:01:17Z PASS api health returns 200 (HTTP 200)
-2026-11-23T13:01:17Z PASS api health reports database up 
-2026-11-23T13:01:17Z PASS api health reports cache state (cache=up)
-2026-11-23T13:01:18Z PASS register user A (HTTP 201)
-2026-11-23T13:01:18Z PASS register user B (HTTP 201)
-2026-11-23T13:01:18Z PASS login user A (HTTP 200)
-2026-11-23T13:01:18Z PASS login with wrong password is rejected (HTTP 401)
-2026-11-23T13:01:18Z PASS auth/me for user A (HTTP 200)
-2026-11-23T13:01:18Z PASS auth/me returns user A's email 
-2026-11-23T13:01:18Z PASS projects without a token is rejected (HTTP 401)
-2026-11-23T13:01:18Z PASS login seeded manager (HTTP 200)
-2026-11-23T13:01:19Z PASS login seeded admin (HTTP 200)
-2026-11-23T13:01:19Z PASS member cannot create a project (role rule) (HTTP 403)
-2026-11-23T13:01:19Z PASS manager creates a project (HTTP 201)
-2026-11-23T13:01:19Z PASS manager creates a task in the project (HTTP 201)
-2026-11-23T13:01:19Z PASS manager lists projects (HTTP 200)
-2026-11-23T13:01:19Z PASS project appears in manager's list 
-2026-11-23T13:01:19Z PASS manager lists tasks of the project (HTTP 200)
-2026-11-23T13:01:19Z PASS task appears in the project's list 
-2026-11-23T13:01:19Z PASS user A lists projects (HTTP 200)
-2026-11-23T13:01:19Z PASS user A does not see the manager's project 
-2026-11-23T13:01:19Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
-2026-11-23T13:01:19Z PASS user A cannot list the project's tasks (HTTP 404)
-2026-11-23T13:01:19Z PASS user A cannot change the task (HTTP 404)
-2026-11-23T13:01:19Z PASS user B does not see the project 
-2026-11-23T13:01:19Z PASS manager adds user A to the project (HTTP 200)
-2026-11-23T13:01:19Z PASS user A now sees the shared project 
-2026-11-23T13:01:20Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
-2026-11-23T13:01:20Z PASS user B still cannot open the project after sharing with A (HTTP 404)
-2026-11-23T13:01:20Z PASS admin sees every project (documented rule) 
-2026-11-23T13:01:20Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
-2026-11-23T13:01:20Z PASS manager deletes the test project (HTTP 204)
-2026-11-23T13:01:20Z PASS deleted project is gone (HTTP 404)
-2026-11-23T13:01:20Z SUMMARY passed=39 failed=0
-exit=0
+2026-11-23T13:29:22Z verify.sh against http://192.168.160.98:30080 (run 1795440562)
+2026-11-23T13:29:22Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:22Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:22Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:22Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:22Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:29:22Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
+2026-11-23T13:29:22Z PASS api health returns 200 (HTTP 200)
+2026-11-23T13:29:22Z PASS api health reports database up 
+2026-11-23T13:29:22Z PASS api health reports cache state (cache=up)
+2026-11-23T13:29:22Z PASS register user A (HTTP 201)
+2026-11-23T13:29:23Z PASS register user B (HTTP 201)
+2026-11-23T13:29:23Z PASS login user A (HTTP 200)
+2026-11-23T13:29:23Z PASS login with wrong password is rejected (HTTP 401)
+2026-11-23T13:29:23Z PASS auth/me for user A (HTTP 200)
+2026-11-23T13:29:23Z PASS auth/me returns user A's email 
+2026-11-23T13:29:23Z PASS projects without a token is rejected (HTTP 401)
+2026-11-23T13:29:23Z PASS login seeded manager (HTTP 200)
+2026-11-23T13:29:24Z PASS login seeded admin (HTTP 200)
+2026-11-23T13:29:24Z PASS member cannot create a project (role rule) (HTTP 403)
+2026-11-23T13:29:24Z PASS manager creates a project (HTTP 201)
+2026-11-23T13:29:24Z PASS manager creates a task in the project (HTTP 201)
+2026-11-23T13:29:24Z PASS manager lists projects (HTTP 200)
+2026-11-23T13:29:24Z PASS project appears in manager's list 
+2026-11-23T13:29:24Z PASS manager lists tasks of the project (HTTP 200)
+2026-11-23T13:29:24Z PASS task appears in the project's list 
+2026-11-23T13:29:24Z PASS user A lists projects (HTTP 200)
+2026-11-23T13:29:24Z PASS user A does not see the manager's project 
+2026-11-23T13:29:24Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
+2026-11-23T13:29:24Z PASS user A cannot list the project's tasks (HTTP 404)
+2026-11-23T13:29:24Z PASS user A cannot change the task (HTTP 404)
+2026-11-23T13:29:24Z PASS user B does not see the project 
+2026-11-23T13:29:24Z PASS manager adds user A to the project (HTTP 200)
+2026-11-23T13:29:24Z PASS user A now sees the shared project 
+2026-11-23T13:29:24Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
+2026-11-23T13:29:24Z PASS user B still cannot open the project after sharing with A (HTTP 404)
+2026-11-23T13:29:25Z PASS admin sees every project (documented rule) 
+2026-11-23T13:29:25Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
+2026-11-23T13:29:25Z PASS manager deletes the test project (HTTP 204)
+2026-11-23T13:29:25Z PASS deleted project is gone (HTTP 404)
+2026-11-23T13:29:25Z SUMMARY passed=39 failed=0
