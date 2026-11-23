@@ -1,23 +1,24 @@
 # Decisions
 
-## D1. Template 9105: what it is (UNVERIFIED)
+## D1. Template 9105 is Kali Linux, not Ubuntu 24.04 (VERIFIED)
 
-The brief is inconsistent: the header says "Kali Linux", the Task 1 text says "Ubuntu 24.04 LTS", and Task 1 requires Ubuntu. I could not inspect the template because the API token lacks `VM.Audit` on `/vms/9105`:
+The brief is inconsistent: the header says "Kali Linux" and Task 1 says "Ubuntu 24.04 LTS". The Proxmox API settles it. Read via `GET /nodes/server4/qemu/9105/config` and `.../status/current` (token permissions granted by the exam admin):
 
-| Check | Result |
-|---|---|
-| `GET nodes/server4/qemu/9105/config` | 403, Permission check failed (VM.Audit) |
-| `GET nodes/server4/qemu/9105/status/current` | 403 |
-| `GET nodes/server4/qemu/9105/agent/get-osinfo` | 403 (needs VM.GuestAgent.Audit) |
-| Terraform clone of 9105 | 403, VM.Clone |
+| Property | Value | Consequence for the Terraform and Ansible |
+|---|---|---|
+| name | `kali-linux` | Template is Kali Linux. The brief's "Ubuntu 24.04" is wrong. |
+| ostype | `l26` | Linux guest; `operating_system.type = "l26"` in `iac/variables.tf` |
+| cloud-init drive | `ide2 = local-lvm:vm-9105-cloudinit` | Cloud-init is present. `initialization` creates the `devops` user and SSH key. |
+| template ciuser | `qt` (with a stored template password) | Not used. Our `user_account` block creates `devops` and overrides it. |
+| QEMU guest agent | `agent=enabled=1` | Terraform can read IPs from the agent. The 10-minute wait is kept as a safety net. |
+| disk | `scsi0 = base-9105-disk-0, size=30G` | The clone size of 30 GB equals the template, so no shrink error occurs. |
+| CPU / RAM | 2 cores, 2048 MB | Overridden to 4 vCPU and 4096 MB per VM, as the brief requires. |
+| network | `net0 virtio, vmbr0`, `ipconfig0 ip=dhcp` | DHCP on the VM network; IPs come from the guest agent. |
+| serial | `serial0 socket`, `vga serial0` | Console available over serial. |
 
-Consequences until the template is inspected:
-- Package manager and user creation: the Terraform side uses cloud-init (`initialization` block), which is distribution-neutral. Ansible will branch on `ansible_os_family` (Debian for both Kali and Ubuntu) and should work either way. Kali is Debian-based, so `apt` applies to both.
-- Cloud-init: bpg/proxmox attaches a cloud-init drive to the clone automatically. If the template has no cloud-init package, the `devops` user and SSH key will not be created. Verify SSH after apply.
-- Guest agent: `agent.enabled = true` makes Terraform wait for IP addresses from the agent, up to `guest_agent_timeout` (10 m). If the template has no `qemu-guest-agent`, apply fails at that wait. Fallback: set `guest_agent_timeout`, use static IPs in `ip_config`, or install the agent via Ansible and re-apply.
-- Disk size: the disk is set to 30 GB. A clone cannot shrink its disk. If the template disk is larger than 30 GB, apply fails. Fallback: raise `disk_gb` to match the template, and record that as a deviation.
+Package manager: Kali is Debian-based, so the Ansible roles use `apt` and the `pkgs.k8s.io` Debian repository. The package and sysctl steps were confirmed on this OS before the full playbook runs (section "Verified on each VM" below).
 
-Action: once the token can read `/vms/9105`, run `GET nodes/server4/qemu/9105/config` and `GET .../agent/get-osinfo` and record the results here.
+Action taken: the Terraform files, the Makefile and the README were kept, because the template supports everything they need. The `os_type` default stays `l26`.
 
 ## D2. Terraform (OpenTofu not needed)
 
@@ -183,3 +184,48 @@ v1.32.5, pinned for the kind test cluster and for schema validation. The kubeadm
 ## D-K8S-14. Local test cluster
 
 kind cluster `projecthub-local` (v1.32.5, one control plane, two workers, NodePort 30080 mapped to the host), kubeconfig in `.tmp/kind-kubeconfig`. It exists only to test the manifests on this machine and is separate from the exam cluster.
+
+## Verified on each VM (applied infrastructure, read-only checks)
+
+Applied with `make tf-apply` (4 added, 0 changed, 0 destroyed). Each VM was checked over SSH as `devops` with `.private/ssh/id_ed25519`:
+
+| VM | IP (DHCP) | VM ID | OS | Kernel | vCPU | RAM (free) | Root disk | sudo without password |
+|---|---|---|---|---|---|---|---|---|
+| c3-docker-host | 192.168.160.11 | 119 | Kali GNU/Linux Rolling | 7.1.5+kali-cloud-amd64 | 4 | 3919 MB of 4096 configured | 30 GB (27 GB free) | yes |
+| c3-k8s-master | 192.168.160.17 | 120 | Kali GNU/Linux Rolling | 7.1.5+kali-cloud-amd64 | 4 | 3919 MB of 4096 configured | 30 GB (27 GB free) | yes |
+| c3-k8s-worker-1 | 192.168.160.33 | 100 | Kali GNU/Linux Rolling | 7.1.5+kali-cloud-amd64 | 4 | 3919 MB of 4096 configured | 30 GB (27 GB free) | yes |
+| c3-k8s-worker-2 | 192.168.160.98 | 121 | Kali GNU/Linux Rolling | 7.1.5+kali-cloud-amd64 | 4 | 3919 MB of 4096 configured | 30 GB (27 GB free) | yes |
+
+Findings for the Kubernetes prerequisites on Kali (checked, not yet applied):
+
+- **Swap:** none (SwapTotal 0, no swap in /etc/fstab). The swap tasks are kept for idempotency. They are no-ops here.
+- **Kernel modules:** `overlay` and `br_netfilter` exist as modules for this kernel and are not loaded yet. The role loads them now and persists them in `/etc/modules-load.d/k8s.conf`.
+- **Sysctls:** `net.ipv4.ip_forward` is 0 now, and the bridge sysctls appear only once `br_netfilter` is loaded. The role writes `/etc/sysctl.d/99-kubernetes.conf`.
+- **containerd:** Kali ships containerd 2.1.9. Its default config has `SystemdCgroup = false` on line 108. The role replaces it with `true`, and a verification task fails the run if the change is missing. The sandbox image is `registry.k8s.io/pause:3.10`, which matches kubeadm 1.32.
+- **Kubernetes packages:** `pkgs.k8s.io` v1.32 returns the key and `Release` with HTTP 200. The package index lists kubeadm, kubelet and kubectl at `1.32.5-1.1`. The role pins `1.32.5-*` and holds the packages.
+- **systemd 261, iptables 1.8.13 (nf_tables), Python 3.14** on the VMs. Ansible uses `/usr/bin/python3`.
+- **Kernel 7.1 risk:** Kubernetes 1.32 is officially tested on LTS kernels. A rolling-kernel 7.1 is newer than that. Expect possible kubelet or cgroup issues. Recorded as a risk; the first kubeadm init will show it.
+
+## D-ANS-1. Ansible roles are written for Kali (Debian family)
+
+Packages come from apt (Kali repo for containerd and base tools, `pkgs.k8s.io` for kubeadm, kubelet and kubectl). Collections are pinned in `ansible/requirements.yml` (`ansible.posix` 2.1.0, `community.general` 12.1.0).
+
+## D-ANS-2. The Kubernetes apt source is written as a deb822 file
+
+The repo is a `.sources` file written with `copy`. `deb822_repository` needs `python3-debian` on the target, which is installed only by a real run. Writing the file directly works the same way and runs in check mode too.
+
+## D-ANS-3. Check mode guards
+
+Some tasks depend on state that check mode does not create: the containerd config file, the containerd and kubelet units, and the packages from the repo (only added in a real run). Those tasks run only when `not ansible_check_mode`. Check mode still covers everything else. Check-mode result on all three k8s nodes and the docker host: `failed=0`.
+
+## D-ANS-4. Inventory is generated from terraform output
+
+`scripts/gen-inventory.sh` writes `ansible/inventory.ini` (gitignored) from `terraform output -json vm_ips`. Nothing is typed by hand, so the IPs can't drift. The file holds IPs and a key path, no secrets.
+
+## D-ANS-5. DHCP addresses
+
+The VMs use DHCP (the template's `ip=dhcp`). The IPs are recorded here, but a DHCP lease can change after a reboot. Before submission, check `make tf-output` again and regenerate the inventory. A static reservation on the router, or static IPs in Terraform, would remove this risk. I did not change this, to keep the VMs as they are.
+
+## D-ANS-6. iothread warning left in place
+
+`terraform apply` warns that `iothread` is ignored on `virtio-scsi-pci`. Setting `iothread = false` made Terraform plan an in-place update on all four VMs. Proxmox ignores the flag on this controller, so it has no effect. Leaving the configuration as it was avoids touching freshly created VMs. The warning is cosmetic.

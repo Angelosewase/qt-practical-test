@@ -1,143 +1,182 @@
-# Task 1 evidence (generated 2026-11-23T07:54:51Z)
+# Task 1 evidence: infrastructure (generated 2026-11-23T08:52:23Z)
+# Contains no secrets: token and passwords are never printed. Public key path only.
 
-## 1. Proxmox API checks with the exam token (values redacted)
-GET /api2/json/version
-{"data":{"release":"9.1","version":"9.1.1","repoid":"42db4a6cf33dac83"}}
+## 1. Template 9105 (read from the Proxmox API)
+ipconfig0 = ip=dhcp
+ide2 = local-lvm:vm-9105-cloudinit,media=cdrom
+ostype = l26
+template = 1
+agent = enabled=1
+cores = 2
+ciuser = qt
+net0 = virtio=BC:24:11:81:B2:FE,bridge=vmbr0
+memory = 2048
+scsi0 = local-lvm:base-9105-disk-0,size=30G
+name = kali-linux
 
-GET /api2/json/nodes
-{"data":[{"level":"","ssl_fingerprint":"<redacted>","status":"online","id":"node/server4","node":"server4","type":"node"}]}
+## 2. Pool exam-c5 members (only these VMs are touched)
+vmid=100 name=c3-k8s-worker-1 status=running
+vmid=119 name=c3-docker-host status=running
+vmid=120 name=c3-k8s-master status=running
+vmid=121 name=c3-k8s-worker-2 status=running
 
-GET /api2/json/cluster/resources?type=vm
-{"data":[]}
-
-GET /api2/json/access/acl
-{"data":[]}
-
-GET /api2/json/nodes/server4/qemu/9105/config
-{"message":"Permission check failed (/vms/9105, VM.Audit)\n","data":null}
-
-GET /api2/json/pools/exam-c5
-{"data":null,"message":"Permission check failed (/pool/exam-c5, Pool.Audit)\n"}
-
-GET /api2/json/nodes/server4/storage/local-lvm/status
-{"data":null,"message":"Permission check failed (/storage/local-lvm, Datastore.Audit|Datastore.AllocateSpace)\n"}
-
-## 2. terraform validate
-Success! The configuration is valid.
-
-
-## 3. terraform plan (summary)
+## 3. terraform plan summary (first plan: create 4 VMs)
   # proxmox_virtual_environment_vm.vm["c3-docker-host"] will be created
-      + name                                 = "c3-docker-host"
-      + node_name                            = "server4"
-      + pool_id                              = "exam-c5"
-      + vm_id                                = (known after apply)
-          + datastore_id = "local-lvm"
-          + vm_id        = 9105
-          + cores      = 4
-          + datastore_id      = "local-lvm"
-          + size              = 30
-          + datastore_id         = "local-lvm"
-              + username = "devops"
-      + memory {
   # proxmox_virtual_environment_vm.vm["c3-k8s-master"] will be created
-      + name                                 = "c3-k8s-master"
-      + node_name                            = "server4"
-      + pool_id                              = "exam-c5"
-      + vm_id                                = (known after apply)
-          + datastore_id = "local-lvm"
-          + vm_id        = 9105
-          + cores      = 4
-          + datastore_id      = "local-lvm"
-          + size              = 30
-          + datastore_id         = "local-lvm"
-              + username = "devops"
-      + memory {
   # proxmox_virtual_environment_vm.vm["c3-k8s-worker-1"] will be created
-      + name                                 = "c3-k8s-worker-1"
-      + node_name                            = "server4"
-      + pool_id                              = "exam-c5"
-      + vm_id                                = (known after apply)
-          + datastore_id = "local-lvm"
-          + vm_id        = 9105
-          + cores      = 4
-          + datastore_id      = "local-lvm"
-          + size              = 30
-          + datastore_id         = "local-lvm"
-              + username = "devops"
-      + memory {
   # proxmox_virtual_environment_vm.vm["c3-k8s-worker-2"] will be created
-      + name                                 = "c3-k8s-worker-2"
-      + node_name                            = "server4"
-      + pool_id                              = "exam-c5"
-      + vm_id                                = (known after apply)
-          + datastore_id = "local-lvm"
-          + vm_id        = 9105
-          + cores      = 4
-          + datastore_id      = "local-lvm"
-          + size              = 30
-          + datastore_id         = "local-lvm"
-              + username = "devops"
-      + memory {
 Plan: 4 to add, 0 to change, 0 to destroy.
-          + vm_id = (known after apply)
-          + vm_id = (known after apply)
-          + vm_id = (known after apply)
-          + vm_id = (known after apply)
 
-## 4. terraform apply (first attempt)
+## 4. terraform apply (exit 0, 4 added, 0 changed, 0 destroyed)
 proxmox_virtual_environment_vm.vm["c3-k8s-worker-1"]: Creating...
-proxmox_virtual_environment_vm.vm["c3-docker-host"]: Creating...
 proxmox_virtual_environment_vm.vm["c3-k8s-master"]: Creating...
+proxmox_virtual_environment_vm.vm["c3-docker-host"]: Creating...
 proxmox_virtual_environment_vm.vm["c3-k8s-worker-2"]: Creating...
+proxmox_virtual_environment_vm.vm["c3-k8s-worker-2"]: Creation complete after 11m21s [id=121]
+proxmox_virtual_environment_vm.vm["c3-docker-host"]: Creation complete after 11m21s [id=119]
+proxmox_virtual_environment_vm.vm["c3-k8s-worker-1"]: Creation complete after 11m23s [id=100]
+proxmox_virtual_environment_vm.vm["c3-k8s-master"]: Creation complete after 11m23s [id=120]
 ╷
-│ Error: VM clone
-│ 
-│   with proxmox_virtual_environment_vm.vm["c3-k8s-master"],
-│   on main.tf line 1, in resource "proxmox_virtual_environment_vm" "vm":
-│    1: resource "proxmox_virtual_environment_vm" "vm" {
-│ 
-│ All attempts fail:
-│ #1: error cloning VM: received an HTTP 403 response - Reason: Permission
-│ check failed (/vms/9105, VM.Clone)
-╵
-╷
-│ Error: VM clone
-│ 
-│   with proxmox_virtual_environment_vm.vm["c3-docker-host"],
-│   on main.tf line 1, in resource "proxmox_virtual_environment_vm" "vm":
-│    1: resource "proxmox_virtual_environment_vm" "vm" {
-│ 
-│ All attempts fail:
-│ #1: error cloning VM: received an HTTP 403 response - Reason: Permission
-│ check failed (/vms/9105, VM.Clone)
-╵
-╷
-│ Error: VM clone
-│ 
-│   with proxmox_virtual_environment_vm.vm["c3-k8s-worker-2"],
-│   on main.tf line 1, in resource "proxmox_virtual_environment_vm" "vm":
-│    1: resource "proxmox_virtual_environment_vm" "vm" {
-│ 
-│ All attempts fail:
-│ #1: error cloning VM: received an HTTP 403 response - Reason: Permission
-│ check failed (/vms/9105, VM.Clone)
-╵
-╷
-│ Error: VM clone
+│ Warning: VM start
 │ 
 │   with proxmox_virtual_environment_vm.vm["c3-k8s-worker-1"],
 │   on main.tf line 1, in resource "proxmox_virtual_environment_vm" "vm":
 │    1: resource "proxmox_virtual_environment_vm" "vm" {
 │ 
-│ All attempts fail:
-│ #1: error cloning VM: received an HTTP 403 response - Reason: Permission
-│ check failed (/vms/9105, VM.Clone)
+│ WARN: iothread is only valid with virtio disk or virtio-scsi-single
+│ controller, ignoring
+│ 
+│ (and 3 more similar warnings elsewhere)
 ╵
-make: *** [Makefile:42: tf-apply] Error 1
-APPLY_EXIT=2
 
-## 5. terraform state
-(empty = no resources created)
+Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
 
-## 6. SSH checks: not run (no VMs exist yet)
+Outputs:
+
+vm_ips = {
+  "c3-docker-host" = "192.168.160.11"
+  "c3-k8s-master" = "192.168.160.17"
+  "c3-k8s-worker-1" = "192.168.160.33"
+  "c3-k8s-worker-2" = "192.168.160.98"
+}
+
+## 5. terraform output
+vm_ips = {
+  "c3-docker-host" = "192.168.160.11"
+  "c3-k8s-master" = "192.168.160.17"
+  "c3-k8s-worker-1" = "192.168.160.33"
+  "c3-k8s-worker-2" = "192.168.160.98"
+}
+vms = {
+  "c3-docker-host" = {
+    "ip" = "192.168.160.11"
+    "role" = "docker-host"
+    "ssh" = "ssh devops@192.168.160.11"
+    "vm_id" = 119
+  }
+  "c3-k8s-master" = {
+    "ip" = "192.168.160.17"
+    "role" = "k8s-control-plane"
+    "ssh" = "ssh devops@192.168.160.17"
+    "vm_id" = 120
+  }
+  "c3-k8s-worker-1" = {
+    "ip" = "192.168.160.33"
+    "role" = "k8s-worker"
+    "ssh" = "ssh devops@192.168.160.33"
+    "vm_id" = 100
+  }
+  "c3-k8s-worker-2" = {
+    "ip" = "192.168.160.98"
+    "role" = "k8s-worker"
+    "ssh" = "ssh devops@192.168.160.98"
+    "vm_id" = 121
+  }
+}
+
+## 6. Proxmox VM configuration (read-only)
+vmid=100 name=c3-k8s-worker-1 cores=4 sockets=1 memory_mb=4096 scsi0=local-lvm:vm-100-disk-0 size=30G ostype=l26 agent=enabled=1
+  status=running cpus=4 maxmem_gb=4 maxdisk_gb=30 guest_agent=1
+vmid=119 name=c3-docker-host cores=4 sockets=1 memory_mb=4096 scsi0=local-lvm:vm-119-disk-0 size=30G ostype=l26 agent=enabled=1
+  status=running cpus=4 maxmem_gb=4 maxdisk_gb=30 guest_agent=1
+vmid=120 name=c3-k8s-master cores=4 sockets=1 memory_mb=4096 scsi0=local-lvm:vm-120-disk-0 size=30G ostype=l26 agent=enabled=1
+  status=running cpus=4 maxmem_gb=4 maxdisk_gb=30 guest_agent=1
+vmid=121 name=c3-k8s-worker-2 cores=4 sockets=1 memory_mb=4096 scsi0=local-lvm:vm-121-disk-0 size=30G ostype=l26 agent=enabled=1
+  status=running cpus=4 maxmem_gb=4 maxdisk_gb=30 guest_agent=1
+
+## 7. SSH as devops with .private/ssh/id_ed25519, OS and resources (every VM)
+--- 192.168.160.11
+login=devops
+hostname=c3-docker-host
+os=Kali GNU/Linux Rolling
+kernel=7.1.5+kali-cloud-amd64
+vcpus=4
+mem_total_mb=3919
+root_disk=30G total, 27G free
+sudo_nopasswd=yes
+swap_total_kb=0
+--- 192.168.160.17
+login=devops
+hostname=c3-k8s-master
+os=Kali GNU/Linux Rolling
+kernel=7.1.5+kali-cloud-amd64
+vcpus=4
+mem_total_mb=3919
+root_disk=30G total, 27G free
+sudo_nopasswd=yes
+swap_total_kb=0
+--- 192.168.160.33
+login=devops
+hostname=c3-k8s-worker-1
+os=Kali GNU/Linux Rolling
+kernel=7.1.5+kali-cloud-amd64
+vcpus=4
+mem_total_mb=3919
+root_disk=30G total, 27G free
+sudo_nopasswd=yes
+swap_total_kb=0
+--- 192.168.160.98
+login=devops
+hostname=c3-k8s-worker-2
+os=Kali GNU/Linux Rolling
+kernel=7.1.5+kali-cloud-amd64
+vcpus=4
+mem_total_mb=3919
+root_disk=30G total, 27G free
+sudo_nopasswd=yes
+swap_total_kb=0
+
+## 8. Ansible: inventory (generated, IPs only), syntax check, ping, lint
+[docker_host]
+c3-docker-host ansible_host=192.168.160.11
+
+[k8s_master]
+c3-k8s-master ansible_host=192.168.160.17
+
+[k8s_workers]
+c3-k8s-worker-1 ansible_host=192.168.160.33
+c3-k8s-worker-2 ansible_host=192.168.160.98
+
+[k8s_cluster:children]
+k8s_master
+k8s_workers
+
+[all:vars]
+ansible_user=devops
+ansible_ssh_private_key_file=<repo>/.private/ssh/id_ed25519
+syntax-check: playbook: site.yml
+ping (ansible all -m ping): pong from c3-docker-host, c3-k8s-master, c3-k8s-worker-1, c3-k8s-worker-2
+ansible-lint (production profile): 
+
+## 9. Ansible check-mode dry run (no changes made on the VMs)
+PLAY RECAP *********************************************************************
+c3-k8s-master              : ok=14   changed=11   unreachable=0    failed=0    skipped=7    rescued=0    ignored=0   
+c3-k8s-worker-1            : ok=14   changed=11   unreachable=0    failed=0    skipped=7    rescued=0    ignored=0   
+c3-k8s-worker-2            : ok=14   changed=11   unreachable=0    failed=0    skipped=7    rescued=0    ignored=0   
+
+## 10. Prerequisite probes on the VMs (read-only)
+- swap: none configured (SwapTotal 0, no swap line in /etc/fstab)
+- kernel modules overlay and br_netfilter: present in /lib/modules, not yet loaded (the role loads them)
+- containerd 2.1.9 default config: 'SystemdCgroup = false' (line 108), replaced to true by the role; sandbox image registry.k8s.io/pause:3.10
+- pkgs.k8s.io v1.32 repo: key and Release return HTTP 200; kubeadm, kubelet and kubectl 1.32.5-1.1 are in the index
+- Kali kali-rolling repo provides containerd (candidate 2.1.9+ds1-2)

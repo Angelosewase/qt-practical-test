@@ -1,0 +1,7 @@
+---
+# Versions pinned for the cluster. Kubernetes minor version matches kind test cluster and kubeconform schema.
+k8s_minor: "1.32"
+k8s_version: "1.32.5"
+k8s_apt_repo: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_minor }}/deb/"
+k8s_apt_key_url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_minor }}/deb/Release.key"
+pod_network_cidr: "10.244.0.0/16"

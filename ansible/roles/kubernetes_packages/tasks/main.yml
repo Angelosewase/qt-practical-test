@@ -1,0 +1,48 @@
+---
+- name: Create apt keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add the Kubernetes apt signing key
+  ansible.builtin.get_url:
+    url: "{{ k8s_apt_key_url }}"
+    dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc
+    mode: "0644"
+    force: false
+
+- name: Add the Kubernetes apt repository (deb822 .sources file)
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.sources
+    content: |
+      Types: deb
+      URIs: {{ k8s_apt_repo }}
+      Suites: /
+      Signed-By: /etc/apt/keyrings/kubernetes-apt-keyring.asc
+    mode: "0644"
+  notify: Refresh apt cache
+
+# Check mode cannot install from a repo that is only added during the real run, so these two tasks are skipped there.
+- name: Install pinned kubeadm, kubelet and kubectl
+  ansible.builtin.apt:
+    name:
+      - "kubelet={{ k8s_version }}-*"
+      - "kubeadm={{ k8s_version }}-*"
+      - "kubectl={{ k8s_version }}-*"
+    state: present
+    update_cache: true
+  when: not ansible_check_mode
+
+- name: Hold the Kubernetes packages so upgrades do not happen by accident
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop: [kubelet, kubeadm, kubectl]
+  when: not ansible_check_mode
+
+- name: Enable kubelet (it restarts until kubeadm init or join runs)
+  ansible.builtin.systemd:
+    name: kubelet
+    enabled: true
+  when: not ansible_check_mode

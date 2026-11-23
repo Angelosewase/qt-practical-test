@@ -22,3 +22,6 @@ tfplan.*
 # Environment files (only .env.example is tracked)
 .env.*
 !.env.example
+
+# Ansible inventory with real IPs (generated)
+ansible/inventory.ini

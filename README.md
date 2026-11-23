@@ -13,7 +13,8 @@ Docker Compose on one VM, and Kubernetes on a three-node kubeadm cluster.
 | Task | Status |
 |---|---|
 | Repo layout, secrets handling, pre-commit secret guard | Done |
-| Task 1: Terraform VMs (`iac/`) | Code validated and planned. **Apply blocked:** the Proxmox token has no `VM.Clone` on template 9105 |
+| Task 1: Terraform VMs (`iac/`) | **Applied.** Four Kali VMs running, verified over SSH as `devops`. Evidence in `monitoring/task1-evidence.txt` |
+| Task 3 prerequisites (`ansible/`) | Roles written for Kali; syntax, lint (production profile) and ping pass; check-mode dry run passes. **Full playbook not run yet** |
 | App analysis and move into `app/` | Done |
 | Task 2: Docker images and Compose (`docker/`) | Built and tested on this machine (34 of 34 functional checks, cache and database outages). **Not pushed:** Docker Hub credentials are placeholders |
 | Task 3: Ansible Kubernetes cluster (`ansible/`) | Not started (needs the VMs) |
@@ -65,7 +66,10 @@ flowchart TB
 ## Infrastructure creation (Task 1)
 
 Prerequisites: Terraform 1.5 or later (tested with 1.17.2), `make`, the Proxmox token in `.private/secrets.env`,
-and the SSH key in `.private/ssh/`.
+and the SSH key in `.private/ssh/` (create it with `ssh-keygen -t ed25519 -N '' -f .private/ssh/id_ed25519`).
+
+The brief says Ubuntu 24.04 for the VMs. The template is actually **Kali Linux** (verified through the Proxmox API,
+see `docs/DECISIONS.md` D1).
 
 ```bash
 make setup         # install the pre-commit secret guard
@@ -75,16 +79,21 @@ make tf-init       # download the bpg/proxmox provider
 make tf-plan       # write iac/tfplan
 make tf-apply      # create the four VMs from template 9105
 make tf-output     # print each VM's IP and SSH command
+make inventory     # write ansible/inventory.ini from the IPs (gitignored)
 ```
 
 ### VM table
 
-| VM name | Role | IP | SSH user |
-|---|---|---|---|
-| c3-docker-host | Application host (Docker Compose) | _pending apply_ | `devops` |
-| c3-k8s-master | Kubernetes control plane | _pending apply_ | `devops` |
-| c3-k8s-worker-1 | Kubernetes worker (also holds the MongoDB volume) | _pending apply_ | `devops` |
-| c3-k8s-worker-2 | Kubernetes worker | _pending apply_ | `devops` |
+Created by `make tf-apply` on Proxmox node `server4`, pool `exam-c5`, from template 9105 (`kali-linux`, Kali GNU/Linux Rolling).
+
+| VM name | Role | IP (DHCP) | VM ID | SSH user |
+|---|---|---|---|---|
+| c3-docker-host | Application host (Docker Compose) | 192.168.160.11 | 119 | `devops` |
+| c3-k8s-master | Kubernetes control plane | 192.168.160.17 | 120 | `devops` |
+| c3-k8s-worker-1 | Kubernetes worker (also holds the MongoDB volume) | 192.168.160.33 | 100 | `devops` |
+| c3-k8s-worker-2 | Kubernetes worker | 192.168.160.98 | 121 | `devops` |
+
+The IPs come from DHCP. Run `make tf-output` to confirm them, then `make inventory` to regenerate `ansible/inventory.ini`.
 
 ### VM login credentials
 

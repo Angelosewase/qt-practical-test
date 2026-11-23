@@ -1,0 +1,10 @@
+---
+# Task 3 entry point. The cluster roles (kubeadm init, join, Flannel) are added in the next step.
+- name: Prepare every Kubernetes node
+  hosts: k8s_cluster
+  become: true
+  roles:
+    - common
+    - kubernetes_prereqs
+    - containerd
+    - kubernetes_packages

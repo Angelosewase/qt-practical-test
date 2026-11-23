@@ -12,6 +12,7 @@ TF_ENV = $(LOAD_SECRETS); \
 	export TF_VAR_vm_password="$$VM_PASSWORD"; \
 	export TF_VAR_ssh_public_key="$$(cat $(CURDIR)/.private/ssh/id_ed25519.pub)"
 
+# Ansible targets are listed after the Kubernetes ones.
 .PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify
 
 help: ## Show available targets
@@ -102,3 +103,20 @@ k8s-status: ## Pods, services and volume claims in the app namespace
 
 k8s-verify: ## Functional checks against the NodePort (K8S_URL overrides; default http://<node>:30080)
 	scripts/verify.sh $${K8S_URL:-http://127.0.0.1:30080}
+
+ANSIBLE_DIR = $(CURDIR)/ansible
+
+inventory: ## Generate ansible/inventory.ini from terraform output
+	scripts/gen-inventory.sh
+
+ansible-lint: ## Lint the Ansible project (production profile)
+	cd ansible && ansible-lint
+
+ansible-syntax: ## Syntax-check the playbook
+	cd ansible && ansible-playbook --syntax-check site.yml
+
+ansible-ping: ## Ping every host in the inventory
+	cd ansible && ansible all -m ansible.builtin.ping
+
+ansible-deps: ## Install the pinned Ansible collections
+	cd ansible && ansible-galaxy collection install -r requirements.yml

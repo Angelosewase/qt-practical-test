@@ -13,7 +13,14 @@ qt-practical-test/
 │   ├── outputs.tf         vm_ips and vms (role, IP, SSH command)
 │   ├── terraform.tfvars.example   Non-secret overrides template
 │   └── .terraform.lock.hcl        Pinned provider versions (committed)
-├── ansible/               Task 3: inventory, playbooks, roles (next step)
+├── ansible/               Task 3: Kubernetes host preparation (cluster roles follow)
+│   ├── ansible.cfg        Inventory path, roles path, pipelining, host key policy
+│   ├── inventory.example.ini   Template with placeholders
+│   ├── inventory.ini      GENERATED from terraform output (gitignored: real IPs)
+│   ├── requirements.yml   Pinned collections (ansible.posix, community.general)
+│   ├── group_vars/all.yml Kubernetes version pins and pod CIDR
+│   ├── site.yml           Entry point
+│   └── roles/             common, kubernetes_prereqs, containerd, kubernetes_packages
 ├── docker/                Task 2: Dockerfiles, nginx configs, docker-compose.yml, .env.example
 │   ├── api.Dockerfile     Go build, Alpine runtime, uid 10001
 │   ├── frontend.Dockerfile   Node build, unprivileged nginx runtime, uid 101
@@ -38,6 +45,7 @@ qt-practical-test/
 │   ├── pre-commit         Git hook: blocks commits that contain a secret value
 │   ├── secret-scan.sh     Scans staged changes, the working tree, or git history
 │   ├── gen-env.sh         Creates docker/.env with generated secrets
+│   ├── gen-inventory.sh   Writes ansible/inventory.ini from terraform output
 │   ├── verify.sh          End-to-end functional checks against any base URL
 │   ├── k8s-render.sh      Fills image names and tags into k8s/ (stdout)
 │   ├── k8s-secrets.sh     Creates app-secrets from docker/.env (values never printed)
