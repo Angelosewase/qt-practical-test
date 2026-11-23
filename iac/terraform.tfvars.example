@@ -1,0 +1,12 @@
+# Copy to iac/terraform.tfvars (gitignored) to override defaults.
+# Secrets are NOT set here. The Makefile exports them from .private/secrets.env as TF_VAR_* variables.
+
+# proxmox_endpoint    = "https://192.168.160.14:8006/"
+# proxmox_token_id    = "candidate5@pve!exam"
+# node_name           = "server4"
+# datastore_id        = "local-lvm"
+# pool_id             = "exam-c5"
+# template_vm_id      = 9105
+# bridge              = "vmbr0"
+# vm_username         = "devops"
+# guest_agent_timeout = "10m"

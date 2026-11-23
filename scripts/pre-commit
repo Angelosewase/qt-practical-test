@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Git pre-commit hook: block commits whose staged additions contain a configured secret value.
+set -euo pipefail
+exec "$(git rev-parse --show-toplevel)/scripts/secret-scan.sh" --staged

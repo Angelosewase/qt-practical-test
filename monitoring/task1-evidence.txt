@@ -1,0 +1,143 @@
+# Task 1 evidence (generated 2026-11-23T07:54:51Z)
+
+## 1. Proxmox API checks with the exam token (values redacted)
+GET /api2/json/version
+{"data":{"release":"9.1","version":"9.1.1","repoid":"42db4a6cf33dac83"}}
+
+GET /api2/json/nodes
+{"data":[{"level":"","ssl_fingerprint":"<redacted>","status":"online","id":"node/server4","node":"server4","type":"node"}]}
+
+GET /api2/json/cluster/resources?type=vm
+{"data":[]}
+
+GET /api2/json/access/acl
+{"data":[]}
+
+GET /api2/json/nodes/server4/qemu/9105/config
+{"message":"Permission check failed (/vms/9105, VM.Audit)\n","data":null}
+
+GET /api2/json/pools/exam-c5
+{"data":null,"message":"Permission check failed (/pool/exam-c5, Pool.Audit)\n"}
+
+GET /api2/json/nodes/server4/storage/local-lvm/status
+{"data":null,"message":"Permission check failed (/storage/local-lvm, Datastore.Audit|Datastore.AllocateSpace)\n"}
+
+## 2. terraform validate
+Success! The configuration is valid.
+
+
+## 3. terraform plan (summary)
+  # proxmox_virtual_environment_vm.vm["c3-docker-host"] will be created
+      + name                                 = "c3-docker-host"
+      + node_name                            = "server4"
+      + pool_id                              = "exam-c5"
+      + vm_id                                = (known after apply)
+          + datastore_id = "local-lvm"
+          + vm_id        = 9105
+          + cores      = 4
+          + datastore_id      = "local-lvm"
+          + size              = 30
+          + datastore_id         = "local-lvm"
+              + username = "devops"
+      + memory {
+  # proxmox_virtual_environment_vm.vm["c3-k8s-master"] will be created
+      + name                                 = "c3-k8s-master"
+      + node_name                            = "server4"
+      + pool_id                              = "exam-c5"
+      + vm_id                                = (known after apply)
+          + datastore_id = "local-lvm"
+          + vm_id        = 9105
+          + cores      = 4
+          + datastore_id      = "local-lvm"
+          + size              = 30
+          + datastore_id         = "local-lvm"
+              + username = "devops"
+      + memory {
+  # proxmox_virtual_environment_vm.vm["c3-k8s-worker-1"] will be created
+      + name                                 = "c3-k8s-worker-1"
+      + node_name                            = "server4"
+      + pool_id                              = "exam-c5"
+      + vm_id                                = (known after apply)
+          + datastore_id = "local-lvm"
+          + vm_id        = 9105
+          + cores      = 4
+          + datastore_id      = "local-lvm"
+          + size              = 30
+          + datastore_id         = "local-lvm"
+              + username = "devops"
+      + memory {
+  # proxmox_virtual_environment_vm.vm["c3-k8s-worker-2"] will be created
+      + name                                 = "c3-k8s-worker-2"
+      + node_name                            = "server4"
+      + pool_id                              = "exam-c5"
+      + vm_id                                = (known after apply)
+          + datastore_id = "local-lvm"
+          + vm_id        = 9105
+          + cores      = 4
+          + datastore_id      = "local-lvm"
+          + size              = 30
+          + datastore_id         = "local-lvm"
+              + username = "devops"
+      + memory {
+Plan: 4 to add, 0 to change, 0 to destroy.
+          + vm_id = (known after apply)
+          + vm_id = (known after apply)
+          + vm_id = (known after apply)
+          + vm_id = (known after apply)
+
+## 4. terraform apply (first attempt)
+proxmox_virtual_environment_vm.vm["c3-k8s-worker-1"]: Creating...
+proxmox_virtual_environment_vm.vm["c3-docker-host"]: Creating...
+proxmox_virtual_environment_vm.vm["c3-k8s-master"]: Creating...
+proxmox_virtual_environment_vm.vm["c3-k8s-worker-2"]: Creating...
+╷
+│ Error: VM clone
+│ 
+│   with proxmox_virtual_environment_vm.vm["c3-k8s-master"],
+│   on main.tf line 1, in resource "proxmox_virtual_environment_vm" "vm":
+│    1: resource "proxmox_virtual_environment_vm" "vm" {
+│ 
+│ All attempts fail:
+│ #1: error cloning VM: received an HTTP 403 response - Reason: Permission
+│ check failed (/vms/9105, VM.Clone)
+╵
+╷
+│ Error: VM clone
+│ 
+│   with proxmox_virtual_environment_vm.vm["c3-docker-host"],
+│   on main.tf line 1, in resource "proxmox_virtual_environment_vm" "vm":
+│    1: resource "proxmox_virtual_environment_vm" "vm" {
+│ 
+│ All attempts fail:
+│ #1: error cloning VM: received an HTTP 403 response - Reason: Permission
+│ check failed (/vms/9105, VM.Clone)
+╵
+╷
+│ Error: VM clone
+│ 
+│   with proxmox_virtual_environment_vm.vm["c3-k8s-worker-2"],
+│   on main.tf line 1, in resource "proxmox_virtual_environment_vm" "vm":
+│    1: resource "proxmox_virtual_environment_vm" "vm" {
+│ 
+│ All attempts fail:
+│ #1: error cloning VM: received an HTTP 403 response - Reason: Permission
+│ check failed (/vms/9105, VM.Clone)
+╵
+╷
+│ Error: VM clone
+│ 
+│   with proxmox_virtual_environment_vm.vm["c3-k8s-worker-1"],
+│   on main.tf line 1, in resource "proxmox_virtual_environment_vm" "vm":
+│    1: resource "proxmox_virtual_environment_vm" "vm" {
+│ 
+│ All attempts fail:
+│ #1: error cloning VM: received an HTTP 403 response - Reason: Permission
+│ check failed (/vms/9105, VM.Clone)
+╵
+make: *** [Makefile:42: tf-apply] Error 1
+APPLY_EXIT=2
+
+## 5. terraform state
+(empty = no resources created)
+
+## 6. SSH checks: not run (no VMs exist yet)
