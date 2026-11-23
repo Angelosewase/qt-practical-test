@@ -1,0 +1,71 @@
+# Valkey cache: optional for the API. No volume: it only holds data that MongoDB can rebuild.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: qt-spring-app
+  labels:
+    app.kubernetes.io/name: valkey
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: valkey
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: valkey
+          image: valkey/valkey:8.1.12-alpine
+          imagePullPolicy: IfNotPresent
+          # The password comes from the environment at start, not from this manifest.
+          command: ["sh", "-c", "exec valkey-server --requirepass \"$VALKEY_PASSWORD\" --save '' --appendonly no"]
+          ports:
+            - name: valkey
+              containerPort: 6379
+          env:
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: app-secrets, key: VALKEY_PASSWORD}
+            # Read by valkey-cli for the probe, so the password is not on a command line.
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef: {name: app-secrets, key: VALKEY_PASSWORD}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli ping | grep -q PONG"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli ping | grep -q PONG"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: qt-spring-app
+  labels:
+    app.kubernetes.io/name: valkey
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: valkey
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: 6379

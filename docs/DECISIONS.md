@@ -103,3 +103,83 @@ Two networks. `edge` carries nginx, frontend and api. `data` is `internal: true`
 ## D-DOCKER-8. Persistence
 
 Only MongoDB has a named volume (`projecthub-mongo-data`). Valkey has none. Verified: after `docker compose restart mongodb`, the API became healthy again with its data.
+
+## D-K8S-1. Manifest layout and namespace
+
+Seven numbered files in `k8s/` (`00-namespace.yaml` to `60-gateway.yaml`) plus `secret.example.yaml`. The numbers set the apply order, so the namespace comes first. Everything is in namespace `qt-spring-app`, as the brief requires.
+
+## D-K8S-2. Configuration and credentials are split
+
+- `ConfigMap api-config`: non-secret settings, including `MONGO_HOST=mongodb:27017`. The brief asks for a ConfigMap holding the datasource, and this is its non-secret part.
+- `Secret app-secrets`: `MONGO_ROOT_USER`, `MONGO_ROOT_PASSWORD`, `VALKEY_PASSWORD`, `JWT_SECRET`.
+- `MONGO_URI` is assembled inside the pod from those pieces with Kubernetes `$(VAR)` expansion. The password never appears in a ConfigMap or in the rendered manifests.
+
+## D-K8S-3. The Secret is generated at deploy time
+
+`scripts/k8s-secrets.sh` reads `docker/.env` and passes it to `kubectl create secret --from-env-file` through a temporary file (`.tmp/`, mode 600, removed on exit). Values are never on the command line and never printed. The script refuses placeholder values. Only `k8s/secret.example.yaml`, which holds placeholders, is committed.
+
+## D-K8S-4. MongoDB: StatefulSet, one replica, PV pinned to a node
+
+- kubeadm has no default storage class, so the PV is a `hostPath` at `/srv/projecthub/mongo`, pinned by `nodeAffinity` to nodes labelled `projecthub/storage=mongo` (the label is set by hand once, documented in the README). The PVC binds to it by name.
+- Reclaim policy `Retain`, so deleting the namespace does not delete data.
+- Trade-off: data lives on one node and is not replicated. Acceptable for the exam, and called out as a risk.
+- An init container runs `chown 999:999` on the directory, because hostPath directories are created root-owned and the MongoDB process runs as uid 999.
+
+## D-K8S-5. Probes
+
+- API readiness: `GET /api/health` (200 only while MongoDB answers). Liveness uses the same path with a longer window (6 failures × 15 s). Reason: a MongoDB outage should not restart the API in a loop. Restarting does not repair the database.
+- Frontend and gateway: `GET /`. MongoDB and Valkey: `mongosh` ping and `valkey-cli ping`.
+- Valkey has no HTTP endpoint, so its probes are exec probes.
+
+## D-K8S-6. Resources
+
+Every container has requests and limits, enforced by `scripts/k8s-policy-check.py`. The API limit is 512 MiB (Go with GOGC defaults uses far less), and MongoDB gets 1 GiB. The four VMs have 4 GB each, so a full pod set fits on two workers.
+
+| Workload | Requests (cpu / mem) | Limits (cpu / mem) |
+|---|---|---|
+| api (×2) | 100m / 128Mi | 1 / 512Mi |
+| frontend (×2) | 50m / 64Mi | 200m / 128Mi |
+| gateway (×2) | 50m / 64Mi | 200m / 128Mi |
+| mongodb | 250m / 512Mi | 1 / 1Gi |
+| valkey | 50m / 64Mi | 500m / 256Mi |
+
+The brief's JVM-heap rule does not apply: the API is a Go binary with no JVM. The equivalent is that the Go runtime is well under its memory limit.
+
+## D-K8S-7. Security context
+
+API and frontend run as non-root with numeric UIDs (10001, 101), `allowPrivilegeEscalation: false`, all capabilities dropped, and a read-only root filesystem. The frontend gets emptyDir volumes for `/tmp` and nginx's cache. The gateway runs the official nginx image, which needs root for port 80 (see D-DOCKER-3). The MongoDB and Valkey images start as root and drop privileges themselves.
+
+## D-K8S-8. Rolling updates with no downtime
+
+`maxUnavailable: 0`, `maxSurge: 1` on api, frontend and gateway, so a rollout never removes the last ready pod. Needed for the brief's "delete a pod while requests continue" test.
+
+## D-K8S-9. NodePort 30080 goes to the gateway
+
+The brief asks for a NodePort on 30080. The gateway, not the frontend, is exposed, so `/` and `/api/` are routed exactly as in Compose. One exposed service is enough, and it keeps the two deployments comparable.
+
+## D-K8S-10. Gateway upstreams are fully qualified
+
+nginx's `resolver` does not apply the pod's DNS search domains, so the bare name `frontend` never resolves in Kubernetes. Found in testing: the probe timed out (HTTP 499) until the upstreams were changed to `frontend.qt-spring-app.svc.cluster.local` and `api.qt-spring-app.svc.cluster.local`. `scripts/check-nginx-parity.py` now fails if the two gateway configs differ beyond the resolver and those names.
+
+## D-K8S-11. Validation method
+
+The brief asks for `kubectl apply --dry-run=client`. In kubectl 1.37 that command needs a reachable API server for schema discovery, even with `--validate=false`. Without a cluster it fails with "connection refused". So `scripts/k8s-validate.sh` runs:
+
+1. render and policy (`k8s-policy-check.py`),
+2. nginx parity,
+3. offline strict schema validation with `kubeconform` against Kubernetes 1.32.5,
+4. `kubectl apply --dry-run=client` and `--dry-run=server` when `KUBECONFIG` reaches a cluster.
+
+Step 4 ran against the kind cluster and passed. The server dry-run needs the namespace to exist first, because a dry-run does not persist it, so the script creates the namespace (idempotent).
+
+## D-K8S-12. Explicit kubeconfig
+
+The default kubeconfig on this machine points to `kind-argocd-cluster` (`127.0.0.1:43929`, not running). It is not ours and is never used. The Makefile requires `KUBECONFIG` to be set explicitly, defaulting to `.private/kubeconfig`.
+
+## D-K8S-13. Kubernetes version
+
+v1.32.5, pinned for the kind test cluster and for schema validation. The kubeadm version on the VMs (Task 3) should match.
+
+## D-K8S-14. Local test cluster
+
+kind cluster `projecthub-local` (v1.32.5, one control plane, two workers, NodePort 30080 mapped to the host), kubeconfig in `.tmp/kind-kubeconfig`. It exists only to test the manifests on this machine and is separate from the exam cluster.

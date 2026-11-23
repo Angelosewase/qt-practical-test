@@ -12,7 +12,7 @@ TF_ENV = $(LOAD_SECRETS); \
 	export TF_VAR_vm_password="$$VM_PASSWORD"; \
 	export TF_VAR_ssh_public_key="$$(cat $(CURDIR)/.private/ssh/id_ed25519.pub)"
 
-.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify
+.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -75,3 +75,30 @@ compose-logs: ## Tail logs of every service (add SERVICE=api to narrow)
 
 verify: ## Functional checks against the local stack (BASE_URL overrides)
 	scripts/verify.sh $${BASE_URL:-http://localhost}
+
+# Kubernetes uses an explicit kubeconfig, never the default ~/.kube/config (which may point at other clusters).
+KUBECONFIG ?= $(CURDIR)/.private/kubeconfig
+KUBE = KUBECONFIG=$(KUBECONFIG)
+
+k8s-render: ## Render k8s/ with image names from docker/.env to stdout
+	scripts/k8s-render.sh
+
+k8s-validate: ## Render, policy, nginx parity, strict schema, and cluster dry-run (if KUBECONFIG reaches one)
+	$(KUBE) scripts/k8s-validate.sh
+
+k8s-secrets: ## Create or update app-secrets from docker/.env (values are never printed)
+	$(KUBE) scripts/k8s-secrets.sh
+
+k8s-deploy: ## Apply the manifests to the cluster in KUBECONFIG and wait for rollout
+	set -o pipefail; $(KUBE) $(MAKE) -s k8s-secrets
+	set -o pipefail; scripts/k8s-render.sh | $(KUBE) kubectl apply -f -
+	for d in mongodb valkey api frontend gateway; do \
+	  if [ "$$d" = mongodb ]; then $(KUBE) kubectl -n qt-spring-app rollout status statefulset/$$d --timeout=300s; \
+	  else $(KUBE) kubectl -n qt-spring-app rollout status deploy/$$d --timeout=300s; fi; \
+	done
+
+k8s-status: ## Pods, services and volume claims in the app namespace
+	$(KUBE) kubectl -n qt-spring-app get pods,svc,pvc -o wide
+
+k8s-verify: ## Functional checks against the NodePort (K8S_URL overrides; default http://<node>:30080)
+	scripts/verify.sh $${K8S_URL:-http://127.0.0.1:30080}

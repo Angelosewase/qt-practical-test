@@ -15,7 +15,21 @@ qt-practical-test/
 │   └── .terraform.lock.hcl        Pinned provider versions (committed)
 ├── ansible/               Task 3: inventory, playbooks, roles (next step)
 ├── docker/                Task 2: Dockerfiles, nginx configs, docker-compose.yml, .env.example
-├── k8s/                   Task 4: Kubernetes manifests (next step)
+│   ├── api.Dockerfile     Go build, Alpine runtime, uid 10001
+│   ├── frontend.Dockerfile   Node build, unprivileged nginx runtime, uid 101
+│   ├── nginx.conf         Gateway for Compose (Docker DNS resolver)
+│   ├── frontend-nginx.conf   SPA static server
+│   ├── docker-compose.yml five services, two networks
+│   └── .env.example       template; the real docker/.env is generated and gitignored
+├── k8s/                   Task 4: Kubernetes manifests, numbered in apply order
+│   ├── 00-namespace.yaml  qt-spring-app
+│   ├── 10-config.yaml     ConfigMaps: api-config and gateway-nginx
+│   ├── 20-mongodb.yaml    PV, PVC, Service and StatefulSet for MongoDB
+│   ├── 30-valkey.yaml     Deployment and Service for the cache
+│   ├── 40-api.yaml        Deployment and Service for the Go API
+│   ├── 50-frontend.yaml   Deployment and Service for the SPA
+│   ├── 60-gateway.yaml    Deployment and NodePort 30080 Service
+│   └── secret.example.yaml   TEMPLATE ONLY; the real Secret is made by scripts/k8s-secrets.sh
 ├── app/                   ProjectHub source (the code behind the brief's "MyDiary"), copied without .git
 │   ├── backend/           Go 1.23 API (Gin, MongoDB, Valkey cache)
 │   └── frontend/          React 18 + Vite SPA
@@ -24,7 +38,12 @@ qt-practical-test/
 │   ├── pre-commit         Git hook: blocks commits that contain a secret value
 │   ├── secret-scan.sh     Scans staged changes, the working tree, or git history
 │   ├── gen-env.sh         Creates docker/.env with generated secrets
-│   └── verify.sh          End-to-end functional checks against any base URL
+│   ├── verify.sh          End-to-end functional checks against any base URL
+│   ├── k8s-render.sh      Fills image names and tags into k8s/ (stdout)
+│   ├── k8s-secrets.sh     Creates app-secrets from docker/.env (values never printed)
+│   ├── k8s-validate.sh    Render, policy, parity, schema, cluster dry-run
+│   ├── k8s-policy-check.py   Requests, limits, probes, pinned tags, NodePort 30080
+│   └── check-nginx-parity.py Keeps the Docker and Kubernetes gateway configs in step
 ├── docs/
 │   ├── WORKLOG.md         Running log: what was done, what broke, how it was fixed
 │   ├── DECISIONS.md       Choices and trade-offs, including template findings
