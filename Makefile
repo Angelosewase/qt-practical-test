@@ -13,7 +13,7 @@ TF_ENV = $(LOAD_SECRETS); \
 	export TF_VAR_ssh_public_key="$$(cat $(CURDIR)/.private/ssh/id_ed25519.pub)"
 
 # Ansible targets are listed after the Kubernetes ones.
-.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify helm-lint helm-deploy helm-uninstall collect-monitoring grading-checks ansible
+.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify helm-lint helm-deploy helm-uninstall gateway-deploy gateway-uninstall collect-monitoring grading-checks ansible
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -132,6 +132,13 @@ helm-uninstall: ## Helm: remove the release, its namespace and its PV (the data 
 	-$(KUBE) helm uninstall projecthub --namespace $(HELM_NS) --wait
 	$(KUBE) kubectl delete namespace $(HELM_NS) --ignore-not-found --wait=true
 	$(KUBE) kubectl delete pv projecthub-helm-mongo-data --ignore-not-found
+
+# Bonus: Gateway API (Traefik v3.7.17, Gateway API v1.6.3 Standard CRDs, vendored under k8s/gateway-api/).
+gateway-deploy: ## Gateway API: CRDs, Traefik controller on the workers, Gateway and HTTPRoutes; NodePort 30090
+	$(KUBE) scripts/gateway-deploy.sh
+
+gateway-uninstall: ## Gateway API: remove routes, controller and CRDs (NodePort 30080 is not touched)
+	$(KUBE) scripts/gateway-uninstall.sh
 
 ANSIBLE_DIR = $(CURDIR)/ansible
 

@@ -1,0 +1,17 @@
+# Traefik v3.7.17 as a Gateway API controller (Kubernetes Gateway provider only).
+# vendor/ holds the upstream RBAC byte-identical (checksums in ../SHA256SUMS); the patch below only points its
+# ClusterRoleBinding at this namespace's service account instead of "default".
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - vendor/traefik-v3.7.17-gateway-rbac.yml
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+patches:
+  - target: {kind: ClusterRoleBinding, name: gateway-controller}
+    patch: |-
+      - op: replace
+        path: /subjects/0/namespace
+        value: traefik-gateway

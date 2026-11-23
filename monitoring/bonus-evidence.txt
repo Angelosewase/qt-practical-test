@@ -131,7 +131,195 @@ kube-scheduler and kube-controller-manager lost their leader-election leases at 
   E1123 13:26:14 server.go:298 "Leaderelection lost"
 After the install (13:27:55 UTC): /readyz ok; master I/O pressure avg10 0.17%; both components Running; all apps healthy.
 
-## 7. Gateway API (+5): not installed
-The install in section 6, a moderate burst of API writes, was enough to stall etcd and restart two control-plane
-components. A Gateway API controller and its CRDs add more writes to the same etcd, so it was not installed, to keep
-both required deployments stable.
+## 7. Gateway API (+5): Traefik v3.7.17, Gateway API v1.6.3 Standard CRDs, NodePort 30090
+
+### 7a. Baseline before the install
+readyz 1: ok
+readyz 2: ok
+readyz 3: ok
+2026-11-23T14:16:11Z
+NAME              CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+c3-k8s-master     98m          2%       797Mi           20%         
+c3-k8s-worker-1   146m         3%       577Mi           15%         
+c3-k8s-worker-2   198m         4%       662Mi           17%         
+etcd-c3-k8s-master                      1/1     Running   0               5h11m
+kube-apiserver-c3-k8s-master            1/1     Running   5 (3h16m ago)   5h11m
+kube-controller-manager-c3-k8s-master   1/1     Running   12 (49m ago)    5h11m
+kube-scheduler-c3-k8s-master            1/1     Running   12 (49m ago)    5h11m
+etcd slow fdatasync, last 10 min: 0
+etcd slow fdatasync, last 60 min: 14
+
+### 7b. CORS origins for port 30090 (ConfigMap api-config, explicit, no wildcard), rolled out first
+make k8s-deploy: configmap/api-config configured; api and gateway rolled out. /readyz ok x3 afterwards,
+0 etcd slow fdatasync in the following 5 minutes, verify.sh 39 of 39 on http://192.168.160.17:30080.
+
+### 7c. make gateway-deploy (started 2026-11-23T14:19:36Z, finished 2026-11-23T14:20:22Z)
+The 10 CRD lines ("customresourcedefinition ... serverside-applied") are omitted.
+[1/5] verify vendored files
+crds/gateway-api-v1.6.3-standard-install.yaml: OK
+controller/vendor/traefik-v3.7.17-gateway-rbac.yml: OK
+[2/5] Gateway API v1.6.3 Standard CRDs
+gateway-deploy: /readyz ok x3
+validatingadmissionpolicy.admissionregistration.k8s.io/safe-upgrades.gateway.networking.k8s.io serverside-applied
+validatingadmissionpolicybinding.admissionregistration.k8s.io/safe-upgrades.gateway.networking.k8s.io serverside-applied
+[3/5] Traefik v3.7.17 controller (namespace traefik-gateway, workers only, NodePort 30090)
+gateway-deploy: /readyz ok x3
+namespace/traefik-gateway created
+serviceaccount/traefik-controller created
+clusterrole.rbac.authorization.k8s.io/gateway-role created
+clusterrolebinding.rbac.authorization.k8s.io/gateway-controller created
+service/traefik created
+deployment.apps/traefik created
+deployment "traefik" successfully rolled out
+[4/5] GatewayClass, Gateway and HTTPRoutes in qt-spring-app
+gateway-deploy: /readyz ok x3
+gatewayclass.gateway.networking.k8s.io/traefik created
+gateway.gateway.networking.k8s.io/projecthub created
+httproute.gateway.networking.k8s.io/projecthub-api created
+httproute.gateway.networking.k8s.io/projecthub-frontend created
+gateway.gateway.networking.k8s.io/projecthub condition met
+httproute.gateway.networking.k8s.io/projecthub-api condition met
+httproute.gateway.networking.k8s.io/projecthub-frontend condition met
+[5/5] state
+NAME                                             CONTROLLER                      ACCEPTED   AGE
+gatewayclass.gateway.networking.k8s.io/traefik   traefik.io/gateway-controller   True       0s
+
+NAMESPACE       NAME                                           CLASS     ADDRESS   PROGRAMMED   AGE
+qt-spring-app   gateway.gateway.networking.k8s.io/projecthub   traefik             True         0s
+
+NAMESPACE       NAME                                                      HOSTNAMES   AGE
+qt-spring-app   httproute.gateway.networking.k8s.io/projecthub-api                    0s
+qt-spring-app   httproute.gateway.networking.k8s.io/projecthub-frontend               0s
+NAME                           READY   STATUS    RESTARTS   AGE   IP            NODE              NOMINATED NODE   READINESS GATES
+pod/traefik-595777474f-njll9   1/1     Running   0          30s   10.244.2.16   c3-k8s-worker-1   <none>           <none>
+
+NAME              TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE   SELECTOR
+service/traefik   NodePort   10.102.174.246   <none>        8000:30090/TCP   30s   app.kubernetes.io/name=traefik
+
+### 7d. kubectl get gatewayclass,gateway,httproute -A, and the route table
+NAME                                             CONTROLLER                      ACCEPTED   AGE   DESCRIPTION
+gatewayclass.gateway.networking.k8s.io/traefik   traefik.io/gateway-controller   True       54s   
+
+NAMESPACE       NAME                                           CLASS     ADDRESS   PROGRAMMED   AGE
+qt-spring-app   gateway.gateway.networking.k8s.io/projecthub   traefik             True         54s
+
+NAMESPACE       NAME                                                      HOSTNAMES   AGE
+qt-spring-app   httproute.gateway.networking.k8s.io/projecthub-api                    54s
+qt-spring-app   httproute.gateway.networking.k8s.io/projecthub-frontend               54s
+ROUTE                 PATH   BACKEND    PORT   ACCEPTED   RESOLVED
+projecthub-api        /api   api        8080   True       True
+projecthub-frontend   /      frontend   8080   True       True
+
+### 7e. curl
+## curl through the Gateway (NodePort 30090)
+--- http://192.168.160.17:30090/api/health
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+{"status":"ok","database":"up","cache":"up"}
+
+--- http://192.168.160.33:30090/api/health
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+{"status":"ok","database":"up","cache":"up"}
+
+--- http://192.168.160.98:30090/api/health
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+{"status":"ok","database":"up","cache":"up"}
+
+--- http://192.168.160.17:30090/ (frontend route)
+HTTP 200 text/html 395 bytes
+--- http://192.168.160.17:30090/projects/123 (SPA deep route via the / HTTPRoute)
+HTTP 200 text/html
+--- POST /api/auth/login with Origin http://192.168.160.17:30090 (listed)
+HTTP 200
+--- POST /api/auth/login with Origin http://evil.example (not listed, must be refused)
+HTTP 403
+--- main URL unchanged: http://192.168.160.17:30080/api/health -> {"status":"ok","database":"up","cache":"up"}
+
+### 7f. scripts/verify.sh after the install (every URL)
+http://192.168.160.17:30090      SUMMARY passed=39 failed=0
+http://192.168.160.33:30090      SUMMARY passed=39 failed=0
+http://192.168.160.98:30090      SUMMARY passed=39 failed=0
+http://192.168.160.17:30080      SUMMARY passed=39 failed=0
+http://192.168.160.33:30080      SUMMARY passed=39 failed=0
+http://192.168.160.98:30080      SUMMARY passed=39 failed=0
+http://192.168.160.11            SUMMARY passed=39 failed=0
+http://192.168.160.17:30081      SUMMARY passed=39 failed=0
+
+Full run through the Gateway, http://192.168.160.17:30090:
+2026-11-23T14:20:36Z verify.sh against http://192.168.160.17:30090 (run 1795443636)
+2026-11-23T14:20:37Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T14:20:37Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T14:20:37Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T14:20:37Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T14:20:37Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T14:20:37Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
+2026-11-23T14:20:37Z PASS api health returns 200 (HTTP 200)
+2026-11-23T14:20:37Z PASS api health reports database up 
+2026-11-23T14:20:37Z PASS api health reports cache state (cache=up)
+2026-11-23T14:20:37Z PASS register user A (HTTP 201)
+2026-11-23T14:20:37Z PASS register user B (HTTP 201)
+2026-11-23T14:20:38Z PASS login user A (HTTP 200)
+2026-11-23T14:20:38Z PASS login with wrong password is rejected (HTTP 401)
+2026-11-23T14:20:38Z PASS auth/me for user A (HTTP 200)
+2026-11-23T14:20:38Z PASS auth/me returns user A's email 
+2026-11-23T14:20:38Z PASS projects without a token is rejected (HTTP 401)
+2026-11-23T14:20:38Z PASS login seeded manager (HTTP 200)
+2026-11-23T14:20:38Z PASS login seeded admin (HTTP 200)
+2026-11-23T14:20:38Z PASS member cannot create a project (role rule) (HTTP 403)
+2026-11-23T14:20:38Z PASS manager creates a project (HTTP 201)
+2026-11-23T14:20:38Z PASS manager creates a task in the project (HTTP 201)
+2026-11-23T14:20:38Z PASS manager lists projects (HTTP 200)
+2026-11-23T14:20:38Z PASS project appears in manager's list 
+2026-11-23T14:20:38Z PASS manager lists tasks of the project (HTTP 200)
+2026-11-23T14:20:38Z PASS task appears in the project's list 
+2026-11-23T14:20:39Z PASS user A lists projects (HTTP 200)
+2026-11-23T14:20:39Z PASS user A does not see the manager's project 
+2026-11-23T14:20:39Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
+2026-11-23T14:20:39Z PASS user A cannot list the project's tasks (HTTP 404)
+2026-11-23T14:20:39Z PASS user A cannot change the task (HTTP 404)
+2026-11-23T14:20:39Z PASS user B does not see the project 
+2026-11-23T14:20:39Z PASS manager adds user A to the project (HTTP 200)
+2026-11-23T14:20:39Z PASS user A now sees the shared project 
+2026-11-23T14:20:39Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
+2026-11-23T14:20:39Z PASS user B still cannot open the project after sharing with A (HTTP 404)
+2026-11-23T14:20:39Z PASS admin sees every project (documented rule) 
+2026-11-23T14:20:39Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
+2026-11-23T14:20:39Z PASS manager deletes the test project (HTTP 204)
+2026-11-23T14:20:39Z PASS deleted project is gone (HTTP 404)
+2026-11-23T14:20:39Z SUMMARY passed=39 failed=0
+
+### 7g. Control plane right after the install
+2026-11-23T14:20:30Z
+readyz 1: ok
+readyz 2: ok
+readyz 3: ok
+NAME              CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+c3-k8s-master     161m         4%       899Mi           23%         
+c3-k8s-worker-1   147m         3%       608Mi           15%         
+c3-k8s-worker-2   160m         4%       770Mi           20%         
+etcd-c3-k8s-master                      1/1     Running   0               5h15m
+kube-apiserver-c3-k8s-master            1/1     Running   5 (3h20m ago)   5h15m
+kube-controller-manager-c3-k8s-master   1/1     Running   12 (53m ago)    5h15m
+kube-scheduler-c3-k8s-master            1/1     Running   12 (54m ago)    5h15m
+etcd slow fdatasync since install start (2026-11-23T14:19:36Z): 1
+
+### 7h. Control plane a few minutes later (steady state)
+2026-11-23T14:22:20Z
+readyz 1: ok
+readyz 2: ok
+readyz 3: ok
+NAME              CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+c3-k8s-master     115m         2%       906Mi           23%         
+c3-k8s-worker-1   159m         3%       613Mi           16%         
+c3-k8s-worker-2   156m         3%       669Mi           17%         
+etcd-c3-k8s-master                      1/1     Running   0               5h17m
+kube-apiserver-c3-k8s-master            1/1     Running   5 (3h22m ago)   5h17m
+kube-controller-manager-c3-k8s-master   1/1     Running   12 (55m ago)    5h17m
+kube-scheduler-c3-k8s-master            1/1     Running   12 (56m ago)    5h17m
+etcd slow fdatasync, last 10 min: 2
+NAME                       READY   STATUS    RESTARTS   AGE     IP            NODE              NOMINATED NODE   READINESS GATES
+traefik-595777474f-njll9   1/1     Running   0          2m35s   10.244.2.16   c3-k8s-worker-1   <none>           <none>
+http://192.168.160.17:30090/api/health -> {"status":"ok","database":"up","cache":"up"}
+http://192.168.160.17:30080/api/health -> {"status":"ok","database":"up","cache":"up"}

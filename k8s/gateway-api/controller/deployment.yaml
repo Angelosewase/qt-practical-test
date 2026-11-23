@@ -1,0 +1,74 @@
+# One replica on purpose: every controller replica writes Gateway and HTTPRoute status to etcd, and etcd on this
+# cluster is the bottleneck (README "Known limitation"). It runs on a worker only, never on the control plane.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: traefik-gateway
+  labels:
+    app.kubernetes.io/name: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: traefik
+    spec:
+      serviceAccountName: traefik-controller
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: traefik
+          image: traefik:v3.7.17
+          imagePullPolicy: IfNotPresent
+          args:
+            - --providers.kubernetesgateway=true
+            - --entryPoints.web.address=:8000
+            - --entryPoints.traefik.address=:8080
+            - --ping=true
+            - --log.level=INFO
+            - --global.checkNewVersion=false
+            - --global.sendAnonymousUsage=false
+          ports:
+            - name: web
+              containerPort: 8000
+            - name: admin
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: admin
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: admin
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 300m, memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]

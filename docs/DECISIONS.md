@@ -456,10 +456,26 @@ The chart has no Secret template and no secret values. It references `existingSe
 
 The release runs in `qt-spring-app-helm` on NodePort 30081 and leaves the main deployment on 30080 untouched. PersistentVolumes are cluster-scoped, so the copy has its own PV (`projecthub-helm-mongo-data`, storage class `projecthub-helm-local`, host path `/srv/projecthub-helm/mongo`). It is pinned by `kubernetes.io/hostname` to `c3-k8s-worker-2`, the worker that does not hold the main MongoDB volume, so no new node label is needed. CORS origins for port 30081 are set in the override file (D-CORS-1 applies to every port). `k8s-policy-check.py` takes the namespace and NodePort from the environment, with defaults unchanged, so the same rules apply to both copies.
 
-## D-GW-1. Gateway API not installed
+## D-GW-1. Gateway API controller: Traefik
 
-Gateway API needs a calm control plane. The Helm install (about 15 objects and 8 pods) caused 11 etcd `slow fdatasync` warnings in 43 s, the worst 6.4 s. The scheduler and the controller-manager lost their leases and restarted once each (13:26 UTC). Both recovered within a minute, but that is the instability described in D-STOR-1. A Gateway API install means vendored CRDs, a controller with its own leader election, and a Gateway and HTTPRoutes. It adds steady and burst load on the same etcd, so it was skipped. NodePort 30080 stays the main URL, served by the nginx gateway Deployment.
+The three candidates were NGINX Gateway Fabric, Envoy Gateway and Traefik. Etcd on this cluster is the limiting resource (D-STOR-1), so the choice was the controller that adds the fewest objects and pods. Traefik runs as one Go process in one Deployment. With only the Kubernetes Gateway provider enabled it needs no CRDs of its own and no separate data-plane pods. NGINX Gateway Fabric starts an nginx Deployment for each Gateway next to its control plane. Envoy Gateway runs a control plane plus Envoy proxy pods, and it also installs its own CRDs. Traefik **v3.7.17** (released 2026-10-30) was pinned. It was the newest release at least two weeks old, and its `go.mod` and documentation name Gateway API **v1.6.3** Standard as the supported and conformance-tested version, so the CRDs are pinned to exactly that release.
 
+## D-GW-2. Vendored, unmodified upstream files
+
+`k8s/gateway-api/crds/gateway-api-v1.6.3-standard-install.yaml` (the official Standard-channel bundle: 10 CRDs and the safe-upgrades admission policy) and `controller/vendor/traefik-v3.7.17-gateway-rbac.yml` are byte-identical to upstream. `k8s/gateway-api/SHA256SUMS` records their hashes, and `make gateway-deploy` checks them before applying anything. The upstream RBAC binds a service account in `default`; instead of editing it, `controller/kustomization.yaml` patches the binding's subject namespace to `traefik-gateway`. The CRDs are applied with server-side apply, because the HTTPRoute CRD is too large for the client-side `last-applied-configuration` annotation.
+
+## D-GW-3. Placement, size and exposure
+
+- One replica. Each Traefik replica writes Gateway and HTTPRoute status, so a second replica would double those writes to etcd for little gain in an exam setting. If the pod dies, the Deployment recreates it, and NodePort 30080 is unaffected throughout.
+- A required node affinity on `node-role.kubernetes.io/control-plane DoesNotExist` keeps it off the master.
+- Requests 50m CPU and 64Mi, limits 300m and 128Mi. It runs as non-root (uid 65532) with a read-only root filesystem, all capabilities dropped, and the default seccomp profile. Version checks and anonymous usage reporting are turned off.
+- Traefik requires a Gateway listener's port to equal one of its entry points, so the listener uses port 8000 (the `web` entry point). The `traefik` Service exposes that port as NodePort **30090** on every node. NodePort 30080 and the nginx gateway stay the main entry point; both paths reach the same `frontend` and `api` Services.
+- Routes: `projecthub-api` (`PathPrefix /api` to `api:8080`) and `projecthub-frontend` (`PathPrefix /` to `frontend:8080`). By the Gateway API rules the longer prefix wins, which matches the nginx `location /api/` and `location /` split. The routes live in `qt-spring-app` next to the Gateway (`allowedRoutes: Same`), so no ReferenceGrant is needed.
+- CORS: the API compares the browser's `Origin` with an explicit list (D-CORS-1). The three `:30090` origins were added to `k8s/10-config.yaml`, and to the chart defaults so `helm-parity` still holds. They were rolled out on their own, before the controller install.
+
+## D-GW-4. Installing gently, and how it went
+
+`scripts/gateway-deploy.sh` waits for `/readyz` to answer `ok` three times in a row before each step (CRDs, controller, routes) and stops if the API server does not settle. The preconditions were checked first: `/readyz` ok three times in a row, master memory 20% (limit 80%), and 0 etcd slow writes in the previous 10 minutes. The install (14:19:36 to 14:20:22 UTC) caused one etcd slow write and no control-plane restarts, and `/readyz` stayed ok. `make gateway-uninstall` removes the routes, then the controller, then the CRDs, if the cluster ever needs the load back. Evidence: `monitoring/bonus-evidence.txt` §7.
 
 ## D-SEC-2. The VM password is allowed in README.md only
 

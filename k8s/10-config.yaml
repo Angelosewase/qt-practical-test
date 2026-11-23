@@ -17,8 +17,8 @@ data:
   CACHE_ENABLED: "true"
   # Explicit browser origins allowed to call the API (the check stays on; no wildcard).
   # Must match exactly what the browser sends: scheme, host and port of the page. Covers the Compose URL
-  # and the NodePort on all three node IPs. Without these the API answers 403 to the login POST (see D-CORS-1).
-  CORS_ORIGINS: "http://192.168.160.11,http://192.168.160.17:30080,http://192.168.160.33:30080,http://192.168.160.98:30080"
+  # the NodePort on all three node IPs, and the Gateway API NodePort 30090 (bonus). Without these the API answers 403 to the login POST (see D-CORS-1).
+  CORS_ORIGINS: "http://192.168.160.11,http://192.168.160.17:30080,http://192.168.160.33:30080,http://192.168.160.98:30080,http://192.168.160.17:30090,http://192.168.160.33:30090,http://192.168.160.98:30090"
   VALKEY_ADDR: valkey:6379
   VALKEY_DB: "0"
   CACHE_STATS_TTL: 2m

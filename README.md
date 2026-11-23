@@ -16,6 +16,7 @@ Both deployments are running and pass the same 39 functional checks.
 | Docker Compose on c3-docker-host | http://192.168.160.11 |
 | Kubernetes NodePort (any node) | http://192.168.160.17:30080, http://192.168.160.33:30080, http://192.168.160.98:30080 |
 | Kubernetes via the Helm chart (bonus, namespace `qt-spring-app-helm`) | http://192.168.160.17:30081, http://192.168.160.33:30081, http://192.168.160.98:30081 |
+| Kubernetes via the Gateway API (bonus, Traefik, same pods as NodePort 30080) | http://192.168.160.17:30090, http://192.168.160.33:30090, http://192.168.160.98:30090 |
 
 **VMs** (Proxmox node `server4`, pool `exam-c5`, cloned from template 9105; each has 4 vCPU, 4 GB RAM and a 30 GB disk; IPs from DHCP, confirm with `make tf-output`)
 
@@ -63,14 +64,14 @@ Each task section below names the files that implement it and the evidence that 
 | Documentation and structure | 10% | this README, `docs/` | done |
 | Application functionality | 5% | `scripts/verify.sh` | done (the app has no search feature; see below) |
 | Bonus: Helm | +5 | `k8s/helm/`, see [Bonus](#bonus) | done (second copy on NodePort 30081) |
-| Bonus: Gateway API | +5 | see [Bonus](#bonus) | not installed (see Bonus) |
+| Bonus: Gateway API | +5 | `k8s/gateway-api/`, see [Bonus](#bonus) | done (Gateway and HTTPRoutes on NodePort 30090) |
 
 ## Repository layout
 
 - [`iac/`](iac/): Task 1. Terraform for the four VMs (`provider.tf`, `variables.tf`, `main.tf`, `outputs.tf`).
 - [`ansible/`](ansible/): Task 3, and the Compose deployment of Task 2. `site.yml`, the roles, the pinned Flannel and metrics-server manifests in `files/`, and an inventory template.
 - [`docker/`](docker/): Task 2. The two Dockerfiles, the nginx configs, `docker-compose.yml` and `.env.example`.
-- [`k8s/`](k8s/): Task 4. The manifests, numbered in apply order, plus `secret.example.yaml` (a template only). `k8s/helm/` holds the Helm chart (bonus).
+- [`k8s/`](k8s/): Task 4. The manifests, numbered in apply order, plus `secret.example.yaml` (a template only). `k8s/helm/` holds the Helm chart and `k8s/gateway-api/` the Gateway API setup (both bonus).
 - [`app/`](app/): the application source (`backend/` Go, `frontend/` React), copied from the exam GitLab without its `.git`.
 - [`monitoring/`](monitoring/): Task 5 screenshots in `screenshots/`, per-VM text snapshots in `<vm>/`, and the evidence files listed in each task section.
 - [`scripts/`](scripts/): helpers called by the Makefile (functional test, resilience demo, collectors, render and validate, secret scan).
@@ -563,13 +564,41 @@ Evidence: [monitoring/bonus-evidence.txt](monitoring/bonus-evidence.txt). The ma
 During the install, etcd stalled for up to 6.4 s and the scheduler and controller-manager restarted once each. This
 is the host limitation described above. Both recovered within a minute, and both deployments kept passing every check.
 
-### Gateway API (not installed)
+### Gateway API (done)
 
-The Gateway API bonus was not installed on this cluster. Even the Helm install, a short burst of API writes, was enough
-to stall etcd and restart two control-plane components (see [Known limitation](#known-limitation-the-proxmox-host-is-overloaded)).
-A Gateway API controller and its CRDs add more steady and burst load on the same etcd, and that would put both
-required deployments at risk. NodePort 30080 therefore stays the entry point, served by the nginx gateway Deployment.
-Details: [docs/DECISIONS.md](docs/DECISIONS.md) D-GW-1.
+External traffic also reaches the main deployment in `qt-spring-app` through the Kubernetes Gateway API. The
+nginx gateway on NodePort 30080 is untouched and stays the main URL. The Gateway API path is a second, standard entry
+point to the **same** frontend and API pods.
+
+```mermaid
+flowchart LR
+    user([Browser]) -->|"http://NODE_IP:30090"| svc[Service traefik<br/>NodePort 30090]
+    svc --> tr[Traefik v3.7.17<br/>namespace traefik-gateway, on a worker]
+    tr --> gw[Gateway projecthub<br/>GatewayClass traefik]
+    gw --> r1[HTTPRoute projecthub-api<br/>PathPrefix /api] --> api[Service api :8080]
+    gw --> r2[HTTPRoute projecthub-frontend<br/>PathPrefix /] --> fe[Service frontend :8080]
+```
+
+| Piece | Where | Notes |
+|---|---|---|
+| Gateway API CRDs | `k8s/gateway-api/crds/` | Standard channel **v1.6.3**, the version Traefik v3.7.17 is built and conformance-tested against; vendored byte-identical, checksums in `k8s/gateway-api/SHA256SUMS` |
+| Controller | `k8s/gateway-api/controller/` | **Traefik v3.7.17**, the lightest of the three candidates: one Go process, no CRDs of its own, no separate data-plane pods. One replica, kept off the control plane, requests 50m/64Mi, limits 300m/128Mi. Upstream RBAC vendored unchanged; a kustomize patch points it at this namespace. |
+| GatewayClass, Gateway, HTTPRoutes | `k8s/gateway-api/routes/gateway.yaml` | `GatewayClass traefik`; `Gateway projecthub` in `qt-spring-app` (HTTP listener); `HTTPRoute projecthub-api` (`/api` → `api:8080`) and `projecthub-frontend` (`/` → `frontend:8080`) |
+| Exposure | `k8s/gateway-api/controller/service.yaml` | NodePort **30090** on every node |
+| CORS | `k8s/10-config.yaml` | The three `:30090` origins added to the explicit list (no wildcard) |
+
+```bash
+make gateway-deploy      # checksums, CRDs, controller, Gateway and routes; waits for /readyz ok x3 before each step
+kubectl get gatewayclass,gateway,httproute -A
+make k8s-verify K8S_URL=http://192.168.160.17:30090
+make gateway-uninstall   # routes, controller, then CRDs; NodePort 30080 is not touched
+```
+
+Result: GatewayClass `Accepted`, Gateway `Programmed`, both HTTPRoutes `Accepted` with `ResolvedRefs`. `verify.sh`
+passes 39 of 39 through the Gateway on all three node IPs. NodePort 30080 (all three IPs), Compose and the Helm copy
+still pass 39 of 39 after the install. A login from an unlisted origin is still refused with 403. The install took
+under a minute. The control plane stayed stable: `/readyz` ok, no component restarts, one slow etcd write.
+Evidence: [monitoring/bonus-evidence.txt](monitoring/bonus-evidence.txt) §7. Design notes: [docs/DECISIONS.md](docs/DECISIONS.md) D-GW-1 to D-GW-4.
 
 ## Troubleshooting
 
