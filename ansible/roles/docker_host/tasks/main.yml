@@ -1,0 +1,84 @@
+---
+- name: Install prerequisites for the Docker repository
+  ansible.builtin.apt:
+    name: [ca-certificates, curl, gnupg]
+    state: present
+    update_cache: true
+
+- name: Create the apt keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download the Docker signing key
+  ansible.builtin.get_url:
+    url: "{{ docker_host_apt_repo }}/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+    force: false
+
+- name: Confirm the Docker signing key fingerprint before trusting it
+  ansible.builtin.shell: |
+    set -o pipefail
+    gpg --show-keys --with-colons /etc/apt/keyrings/docker.asc | awk -F: '/^fpr:/ {print $10; exit}'
+  args:
+    executable: /bin/bash
+  register: docker_host_key_fpr
+  changed_when: false
+  failed_when: docker_host_key_fpr.stdout != docker_host_key_fingerprint
+
+- name: Add the Docker apt repository (deb822)
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/docker.sources
+    content: |
+      Types: deb
+      URIs: {{ docker_host_apt_repo }}
+      Suites: {{ docker_host_apt_suite }}
+      Components: stable
+      Architectures: amd64
+      Signed-By: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+  notify: Refresh apt cache
+
+# Check mode does not run the repo handler, so the flush is skipped there too.
+- name: Flush handlers so the new repository is indexed before installing
+  ansible.builtin.meta: flush_handlers
+
+- name: Install Docker Engine and the compose and buildx plugins
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+  when: not ansible_check_mode
+
+- name: Log rotation for container logs (bounded disk use on the VM)
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {"max-size": "10m", "max-file": "3"}
+      }
+    mode: "0644"
+    validate: python3 -m json.tool %s
+  notify: Restart docker
+
+- name: Let the devops user run docker (root-equivalent; see D-DH-2)
+  ansible.builtin.user:
+    name: "{{ docker_host_user }}"
+    groups: docker
+    append: true
+  when: not ansible_check_mode
+
+- name: Enable and start Docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+  when: not ansible_check_mode

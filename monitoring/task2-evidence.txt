@@ -1,0 +1,87 @@
+# Task 2 evidence: Docker Compose stack on c3-docker-host (generated 2026-11-23T09:44:22Z)
+# No secrets are printed. Docker Hub tokens, the .env contents and the MongoDB and Valkey passwords are never shown.
+
+## 1. Images pushed to Docker Hub (tags read back from the registry)
+angelsewase/projecthub-api:1.0.0 last_updated=2026-11-23T09:35:38.089923Z archs=['amd64'] digests=['sha256:54bf67c39569']
+angelsewase/projecthub-frontend:1.0.0 last_updated=2026-11-23T09:35:29.928792Z archs=['amd64'] digests=['sha256:24468276db5c']
+
+## 2. Docker versions on the VM
+c3-docker-host
+Docker version 29.10.0, build fdd4b8e
+Docker Compose version v5.8.0
+
+## 3. Stack state (docker compose ps on the VM)
+NAME                    IMAGE                                   COMMAND                  SERVICE    CREATED         STATUS                        PORTS
+projecthub-api-1        angelsewase/projecthub-api:1.0.0        "/usr/local/bin/proj…"   api        2 minutes ago   Up About a minute (healthy)   8080/tcp
+projecthub-frontend-1   angelsewase/projecthub-frontend:1.0.0   "/docker-entrypoint.…"   frontend   2 minutes ago   Up About a minute (healthy)   8080/tcp
+projecthub-mongodb-1    mongo:7.0.14                            "docker-entrypoint.s…"   mongodb    2 minutes ago   Up About a minute (healthy)   27017/tcp
+projecthub-nginx-1      nginx:1.27.5-alpine                     "/docker-entrypoint.…"   nginx      2 minutes ago   Up About a minute (healthy)   0.0.0.0:80->80/tcp, [::]:80->80/tcp
+projecthub-valkey-1     valkey/valkey:8.1.12-alpine             "tini -- docker-entr…"   valkey     2 minutes ago   Up About a minute (healthy)   6379/tcp
+
+## 4. Listening sockets on the VM (host ports only)
+LISTEN 0.0.0.0:22
+LISTEN 0.0.0.0:5355
+LISTEN 0.0.0.0:80
+LISTEN 127.0.0.53%lo:53
+LISTEN 127.0.0.54:53
+LISTEN [::]:22
+LISTEN [::]:5355
+LISTEN [::]:80
+
+## 5. Environment file permissions on the VM (contents not shown)
+file=/opt/projecthub/docker/.env mode=600 owner=devops
+file=/opt/projecthub/docker/docker-compose.yml mode=644 owner=devops
+file=/opt/projecthub/docker/nginx.conf mode=644 owner=devops
+
+## 6. Container health on the VM (from docker inspect, no environment variables)
+/projecthub-api-1 health=healthy restarts=0
+/projecthub-frontend-1 health=healthy restarts=0
+/projecthub-mongodb-1 health=healthy restarts=0
+/projecthub-nginx-1 health=healthy restarts=0
+/projecthub-valkey-1 health=healthy restarts=0
+
+## 7. Functional verification: scripts/verify.sh http://192.168.160.11
+2026-11-23T09:44:26Z verify.sh against http://192.168.160.11 (run 1795427066)
+2026-11-23T09:44:26Z PASS frontend / returns 200 (HTTP 200)
+2026-11-23T09:44:26Z PASS SPA fallback for /projects/123 (HTTP 200)
+2026-11-23T09:44:26Z PASS api health returns 200 (HTTP 200)
+2026-11-23T09:44:26Z PASS api health reports database up 
+2026-11-23T09:44:26Z PASS api health reports cache state (cache=up)
+2026-11-23T09:44:26Z PASS register user A (HTTP 201)
+2026-11-23T09:44:27Z PASS register user B (HTTP 201)
+2026-11-23T09:44:27Z PASS login user A (HTTP 200)
+2026-11-23T09:44:27Z PASS login with wrong password is rejected (HTTP 401)
+2026-11-23T09:44:27Z PASS auth/me for user A (HTTP 200)
+2026-11-23T09:44:27Z PASS auth/me returns user A's email 
+2026-11-23T09:44:27Z PASS projects without a token is rejected (HTTP 401)
+2026-11-23T09:44:27Z PASS login seeded manager (HTTP 200)
+2026-11-23T09:44:28Z PASS login seeded admin (HTTP 200)
+2026-11-23T09:44:28Z PASS member cannot create a project (role rule) (HTTP 403)
+2026-11-23T09:44:28Z PASS manager creates a project (HTTP 201)
+2026-11-23T09:44:28Z PASS manager creates a task in the project (HTTP 201)
+2026-11-23T09:44:28Z PASS manager lists projects (HTTP 200)
+2026-11-23T09:44:28Z PASS project appears in manager's list 
+2026-11-23T09:44:28Z PASS manager lists tasks of the project (HTTP 200)
+2026-11-23T09:44:28Z PASS task appears in the project's list 
+2026-11-23T09:44:28Z PASS user A lists projects (HTTP 200)
+2026-11-23T09:44:28Z PASS user A does not see the manager's project 
+2026-11-23T09:44:28Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
+2026-11-23T09:44:28Z PASS user A cannot list the project's tasks (HTTP 404)
+2026-11-23T09:44:28Z PASS user A cannot change the task (HTTP 404)
+2026-11-23T09:44:28Z PASS user B does not see the project 
+2026-11-23T09:44:29Z PASS manager adds user A to the project (HTTP 200)
+2026-11-23T09:44:29Z PASS user A now sees the shared project 
+2026-11-23T09:44:29Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
+2026-11-23T09:44:29Z PASS user B still cannot open the project after sharing with A (HTTP 404)
+2026-11-23T09:44:29Z PASS admin sees every project (documented rule) 
+2026-11-23T09:44:29Z PASS manager deletes the test project (HTTP 204)
+2026-11-23T09:44:29Z PASS deleted project is gone (HTTP 404)
+2026-11-23T09:44:29Z SUMMARY passed=34 failed=0
+
+## 8. Ansible: full playbook, second run after the Task 2 deployment (idempotency)
+PLAY RECAP *********************************************************************
+c3-docker-host             : ok=22   changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+c3-k8s-master              : ok=39   changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+c3-k8s-worker-1            : ok=26   changed=0    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0   
+c3-k8s-worker-2            : ok=26   changed=0    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0
+

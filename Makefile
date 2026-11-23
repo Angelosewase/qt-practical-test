@@ -59,10 +59,12 @@ compose-config: ## Validate docker-compose.yml and its env file
 docker-build: ## Build both app images locally (tags from docker/.env)
 	$(COMPOSE) build
 
-docker-push: ## Log in to Docker Hub from .private/secrets.env, build, and push the app images
+docker-push: ## Build and push the app images to Docker Hub (credentials from .private/secrets.env)
 	set -a; . $(CURDIR)/.private/secrets.env; set +a; \
 	test -n "$$DOCKERHUB_USER" && test -n "$$DOCKERHUB_TOKEN" && ! echo "$$DOCKERHUB_USER" | grep -q '<' || { echo "DOCKERHUB_USER/DOCKERHUB_TOKEN not set in .private/secrets.env"; exit 1; }; \
-	echo "$$DOCKERHUB_TOKEN" | docker login -u "$$DOCKERHUB_USER" --password-stdin >/dev/null; \
+	export DOCKER_CONFIG=$(CURDIR)/.tmp/docker-push-config; rm -rf $$DOCKER_CONFIG; mkdir -p $$DOCKER_CONFIG; chmod 700 $$DOCKER_CONFIG; \
+	trap 'rm -rf $(CURDIR)/.tmp/docker-push-config' EXIT; \
+	echo "$$DOCKERHUB_TOKEN" | docker login -u "$$DOCKERHUB_USER" --password-stdin; \
 	DOCKERHUB_USER="$$DOCKERHUB_USER" $(COMPOSE) build && DOCKERHUB_USER="$$DOCKERHUB_USER" $(COMPOSE) push api frontend
 
 compose-up: ## Start the full stack (builds if needed); nginx on port 80

@@ -31,3 +31,10 @@
   hosts: k8s_master
   roles:
     - k8s_verify
+
+- name: Docker host and the compose stack (Task 2)
+  hosts: docker_host
+  become: true
+  roles:
+    - docker_host
+    - compose_app

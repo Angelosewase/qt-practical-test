@@ -1,0 +1,58 @@
+---
+- name: Create the compose project directory
+  ansible.builtin.file:
+    path: "{{ compose_app_dir }}"
+    state: directory
+    owner: "{{ compose_app_user }}"
+    group: "{{ compose_app_user }}"
+    mode: "0750"
+
+- name: Copy the compose file and the gateway config (no secrets)
+  ansible.builtin.copy:
+    src: "{{ compose_app_controller_dir }}/{{ item }}"
+    dest: "{{ compose_app_dir }}/{{ item }}"
+    owner: "{{ compose_app_user }}"
+    group: "{{ compose_app_user }}"
+    mode: "0644"
+  loop:
+    - docker-compose.yml
+    - nginx.conf
+
+# The .env holds the MongoDB, Valkey and JWT secrets. no_log keeps its contents out of the run output.
+- name: Copy the environment file with the stack secrets (mode 0600, no_log)
+  ansible.builtin.copy:
+    src: "{{ compose_app_controller_dir }}/.env"
+    dest: "{{ compose_app_dir }}/.env"
+    owner: "{{ compose_app_user }}"
+    group: "{{ compose_app_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: Pull the pinned images from Docker Hub
+  ansible.builtin.command: docker compose -f docker-compose.yml pull --quiet
+  args:
+    chdir: "{{ compose_app_dir }}"
+  register: compose_app_pull
+  changed_when: false
+  when: not ansible_check_mode
+
+# --no-build: the VM never builds from source. It runs the images pushed to Docker Hub.
+- name: Start the stack and wait until every service is healthy
+  ansible.builtin.command: docker compose -f docker-compose.yml up -d --no-build --wait --wait-timeout 300
+  args:
+    chdir: "{{ compose_app_dir }}"
+  register: compose_app_up
+  changed_when: "'Started' in compose_app_up.stderr or 'Created' in compose_app_up.stderr or 'Recreated' in compose_app_up.stderr"
+  when: not ansible_check_mode
+
+- name: Show the service states
+  ansible.builtin.command: docker compose -f docker-compose.yml ps
+  args:
+    chdir: "{{ compose_app_dir }}"
+  register: compose_app_ps
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Display the stack state
+  ansible.builtin.debug:
+    var: compose_app_ps.stdout_lines

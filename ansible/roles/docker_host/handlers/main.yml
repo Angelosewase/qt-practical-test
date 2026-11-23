@@ -1,0 +1,11 @@
+---
+- name: Refresh apt cache
+  ansible.builtin.apt:
+    update_cache: true
+  when: not ansible_check_mode
+
+- name: Restart docker
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+  when: not ansible_check_mode

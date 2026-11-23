@@ -271,3 +271,43 @@ Password login is enabled through `/etc/ssh/sshd_config.d/10-exam-access.conf`, 
 ## D-CL-8. Terraform and the password
 
 `TF_VAR_vm_password` is taken from the same `VM_PASSWORD`. Changing that value makes Terraform plan a change to the VMs' cloud-init user settings. The VMs must not be replaced for a password change, so the password is set with Ansible and Terraform is not re-applied for it. Running `make tf-apply` after a password change would plan an update; avoid it.
+
+## D-DH-1. Docker Engine from the official Docker repository, not Kali's package
+
+Kali ships `docker.io` 28.5 and a standalone `docker-compose` v2 binary, but no `docker compose` plugin. The Docker CE repository for Debian trixie (Kali rolling's base, reachable from the VMs) provides `docker-ce`, `docker-compose-plugin` and `docker-buildx-plugin`. The role verifies the signing key fingerprint `9DC858229FC7DD38854AE2D88D81803C0EBFCD88` before the key is trusted, and fails if it does not match. Installed on the VM: Docker 29.10.0, Compose v5.8.0.
+
+## D-DH-2. The devops user is in the docker group
+
+Docker group membership is root-equivalent. This is an accepted tradeoff: devops is the single administrative account on a single-tenant exam VM, and the same user already has passwordless sudo (set by Kali's cloud-init). Ansible needs root only for installation, so this does not change the security picture much. Noted, not hidden.
+
+## D-DH-3. Images are pushed by explicit version tags
+
+Both images are tagged `1.0.0` (never `latest`) and built for `linux/amd64`. Tags were read back from Docker Hub after the push. Digests: api `sha256:54bf67c39569…`, frontend `sha256:24468276db5c…`. The compose file pins the same tags through `API_TAG` and `FRONTEND_TAG`. Third-party images are pinned too: `mongo:7.0.14`, `valkey/valkey:8.1.12-alpine`, `nginx:1.27.5-alpine`.
+
+## D-DH-4. Pushing from a clean Docker config
+
+On this laptop, `docker login` tries to save credentials through a `pass` credential helper that is not initialised. The save fails, and the push goes out unauthenticated, which Docker Hub reports as `insufficient_scope`. `make docker-push` now logs in with a throwaway `DOCKER_CONFIG` in `.tmp/` (gitignored), removed on exit. The host's `~/.docker` is unchanged.
+
+## D-DH-5. The two repositories were created through the Docker Hub API
+
+The push needs the repositories to exist. I created `angelsewase/projecthub-api` and `angelsewase/projecthub-frontend` with the same token (public, description "ProjectHub exam image"). This is an action on the exam Docker Hub account, recorded here so it is not a surprise.
+
+## D-DH-6. The VM runs images from Docker Hub and never builds
+
+The compose file keeps its build sections for local work. On the VM, the Ansible role runs `docker compose pull`, then `up -d --no-build --wait`, so the deployed code is exactly the pushed image. The compose project lives in `/opt/projecthub/docker`, with the compose file, `nginx.conf`, and the `.env`.
+
+## D-DH-7. Secrets reach the VM through no_log and a 0600 file
+
+`docker/.env` (MongoDB, Valkey and JWT secrets) is copied with `no_log`, mode 0600, owned by devops. It is never printed in the run output. Verified: mode 600 on the VM.
+
+## D-DH-8. Bounded container logs
+
+`/etc/docker/daemon.json` sets the json-file driver with 10 MB files, 3 kept per container. The VM has 30 GB of disk, and an unbounded log could fill it during a long exam. `docker compose logs` still works for readable tails.
+
+## D-DH-9. Network exposure is checked on the VM
+
+`ss -tlnH` on the VM shows only ports 22 and 80 listening on the application side (53 and 5355 belong to systemd-resolved). MongoDB and Valkey have no host mapping, and the `data` network is internal. Evidence: `monitoring/task2-evidence.txt`, section 4.
+
+## D-DH-10. The Compose stack is deployed by Ansible, idempotently
+
+The `docker_host` and `compose_app` roles run in the full playbook. A second full run reported `changed=0` on every host. The `compose up --wait` task reports a change only when a container was started or recreated, and the `daemon.json` change restarts docker only when it actually changes.

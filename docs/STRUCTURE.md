@@ -23,7 +23,8 @@ qt-practical-test/
 │   ├── group_vars/all.yml Kubernetes version pins and pod CIDR
 │   ├── site.yml           Entry point
 │   └── roles/             vm_access (devops password, SSH), common, kubernetes_prereqs,
-│                          containerd, kubernetes_packages, k8s_control_plane, k8s_worker, k8s_verify
+│                          containerd, kubernetes_packages, k8s_control_plane, k8s_worker, k8s_verify,
+│                          docker_host (Docker CE), compose_app (copies docker/ to the VM, runs compose)
 ├── docker/                Task 2: Dockerfiles, nginx configs, docker-compose.yml, .env.example
 │   ├── api.Dockerfile     Go build, Alpine runtime, uid 10001
 │   ├── frontend.Dockerfile   Node build, unprivileged nginx runtime, uid 101
@@ -43,7 +44,7 @@ qt-practical-test/
 ├── app/                   ProjectHub source (the code behind the brief's "MyDiary"), copied without .git
 │   ├── backend/           Go 1.23 API (Gin, MongoDB, Valkey cache)
 │   └── frontend/          React 18 + Vite SPA
-├── monitoring/            Evidence files and screenshots (Task 5)
+├── monitoring/            Evidence: task1-evidence.txt, task3-evidence.txt, task2-evidence.txt; screenshots (Task 5)
 ├── scripts/
 │   ├── pre-commit         Git hook: blocks commits that contain a secret value
 │   ├── secret-scan.sh     Scans staged changes, the working tree, or git history

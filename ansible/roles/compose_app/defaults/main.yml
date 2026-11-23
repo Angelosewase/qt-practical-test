@@ -1,0 +1,4 @@
+---
+compose_app_dir: /opt/projecthub/docker
+compose_app_controller_dir: "{{ playbook_dir }}/../docker"
+compose_app_user: devops

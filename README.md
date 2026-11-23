@@ -14,9 +14,9 @@ Docker Compose on one VM, and Kubernetes on a three-node kubeadm cluster.
 |---|---|
 | Repo layout, secrets handling, pre-commit secret guard | Done |
 | Task 1: Terraform VMs (`iac/`) | **Applied.** Four Kali VMs running, verified over SSH as `devops`. Evidence in `monitoring/task1-evidence.txt` |
-| Task 3: Kubernetes cluster (`ansible/`) | **Built and verified**: kubeadm 1.32.5 control plane, Flannel, two workers, three Ready nodes. Second cluster run changed nothing. The devops password step is written but **waits for `VM_PASSWORD`** |
+| Task 3: Kubernetes cluster (`ansible/`) | **Built and verified**: kubeadm 1.32.5 control plane, Flannel, two workers, three Ready nodes. The devops password is set on all four VMs (password and key login verified). Full playbook reruns report `changed=0` |
 | App analysis and move into `app/` | Done |
-| Task 2: Docker images and Compose (`docker/`) | Built and tested on this machine (34 of 34 functional checks, cache and database outages). **Not pushed:** Docker Hub credentials are placeholders |
+| Task 2: Docker images and Compose (`docker/`) | **Deployed on c3-docker-host** (http://192.168.160.11). Images pushed to Docker Hub as `angelsewase/projecthub-api:1.0.0` and `angelsewase/projecthub-frontend:1.0.0`. 34 of 34 functional checks pass on the VM |
 | Task 3: Ansible Kubernetes cluster (`ansible/`) | Not started (needs the VMs) |
 | Task 4: Kubernetes manifests (`k8s/`) | Validated, and deployed and tested on a **local kind cluster** (34 of 34). Not yet on the exam cluster |
 | Task 5: Monitoring (`monitoring/`) | Not started |
@@ -141,19 +141,30 @@ make verify              # functional checks through http://localhost
 make docker-push         # log in to Docker Hub and push api and frontend (needs real credentials)
 ```
 
-On c3-docker-host, set `DOCKERHUB_USER` and the tags in `docker/.env`, then run `docker compose -f docker/docker-compose.yml pull && ... up -d`.
+**Deployed on c3-docker-host (192.168.160.11)** by the Ansible roles `docker_host` and `compose_app` (`make ansible-run`).
+Access: http://192.168.160.11 (port 80). The VM pulls the Docker Hub images and never builds from source.
+Compose project on the VM: `/opt/projecthub/docker`. Useful commands on the VM:
+
+```bash
+cd /opt/projecthub/docker
+docker compose ps                  # service states
+docker compose logs --tail=50 api  # API log tail (the Go API)
+docker compose restart api         # restart one service
+```
+
+Publishing images (requires the Docker Hub token in `.private/secrets.env`): `make docker-push`.
 
 Images and tags:
 
 | Image | Tag | Base (pinned) |
 |---|---|---|
-| `<dockerhub-user>/projecthub-api` | `1.0.0` | `golang:1.23.12-alpine3.21` build, `alpine:3.21.10` runtime, uid 10001 |
-| `<dockerhub-user>/projecthub-frontend` | `1.0.0` | `node:20.19.6-alpine3.21` build, `nginxinc/nginx-unprivileged:1.27.5-alpine` runtime, uid 101 |
+| `angelsewase/projecthub-api` | `1.0.0` | `golang:1.23.12-alpine3.21` build, `alpine:3.21.10` runtime, uid 10001 |
+| `angelsewase/projecthub-frontend` | `1.0.0` | `node:20.19.6-alpine3.21` build, `nginxinc/nginx-unprivileged:1.27.5-alpine` runtime, uid 101 |
 | `nginx` | `1.27.5-alpine` | official |
 | `mongo` | `7.0.14` | official |
 | `valkey/valkey` | `8.1.12-alpine` | official |
 
-Replace `<dockerhub-user>` with your Docker Hub account: **[PLACEHOLDER]**.
+Docker Hub namespace: `angelsewase` (public repositories).
 
 ## Kubernetes deployment (Task 4)
 
@@ -216,7 +227,7 @@ persistent volume. Without it the API reads MongoDB directly and works, only slo
 
 ## Troubleshooting and logs
 
-- Compose logs: `make compose-logs` or `make compose-logs SERVICE=api`; `docker compose -f docker/docker-compose.yml logs -f --tail=50 api`.
+- Compose logs (on the VM): `cd /opt/projecthub/docker && docker compose logs -f --tail=50 api`. Locally: `make compose-logs SERVICE=api`.
 - Kubernetes logs: `kubectl -n qt-spring-app logs deploy/api --tail=50`; `kubectl -n qt-spring-app logs statefulset/mongodb`.
 - Health: `curl http://<host>/api/health`.
 - Pods not ready: `kubectl -n qt-spring-app describe pod <name>` and `kubectl -n qt-spring-app get events --sort-by=.lastTimestamp`.
