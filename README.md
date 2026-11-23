@@ -298,8 +298,7 @@ persistent volume. Without it the API reads MongoDB directly and works, only slo
 ## Monitoring
 
 Monitoring uses standard command-line tools on each VM, plus `kubectl top` (metrics-server) on the cluster. Everything
-that is text is saved with UTC timestamps; the screenshots are taken by hand from a terminal and browser, with the
-commands listed in [monitoring/SCREENSHOTS.md](monitoring/SCREENSHOTS.md).
+that is text is saved with UTC timestamps; the screenshots are taken by hand from a terminal and browser.
 
 ### Text output (automated, read-only)
 
@@ -337,7 +336,7 @@ Other text evidence: [monitoring/final-verify.txt](monitoring/final-verify.txt) 
 
 ### Screenshots
 
-Each image is embedded with its relative path and has a one-line caption. The files are in [monitoring/screenshots/](monitoring/screenshots/). Filenames follow [monitoring/SCREENSHOTS.md](monitoring/SCREENSHOTS.md); the four browser shots use the names you chose (see the mapping in that file).
+Each image is embedded with its relative path and has a one-line caption. The files are in [monitoring/screenshots/](monitoring/screenshots/).
 
 
 #### Per VM: top, df -h, free -h, uptime, ss -tulpn
@@ -500,22 +499,22 @@ Each image is embedded with its relative path and has a one-line caption. The fi
 
 Docker Compose, http://192.168.160.11:
 
-![Compose login](monitoring/screenshots/docker-deployed-app-login.png)
+![Compose login](monitoring/screenshots/app-compose-login.png)
 
 *login page on Docker Compose*
 
-![Compose project list](monitoring/screenshots/docker-deployed-projects-page.png)
+![Compose project list](monitoring/screenshots/app-compose-project.png)
 
 *project list after login on Docker Compose*
 
 
 Kubernetes NodePort, http://192.168.160.17:30080:
 
-![Kubernetes login](monitoring/screenshots/K8s-deployed-login-page.png)
+![Kubernetes login](monitoring/screenshots/app-k8s-login.png)
 
 *login page on the Kubernetes NodePort*
 
-![Kubernetes project](monitoring/screenshots/K8s-deployed-project-details-page.png)
+![Kubernetes project](monitoring/screenshots/app-k8s-project.png)
 
 *project page after login on the Kubernetes NodePort*
 
@@ -539,6 +538,5 @@ the running log is in [docs/WORKLOG.md](docs/WORKLOG.md), and operations steps a
 
 ## Still to do before submission
 
-- Take the screenshots listed in [monitoring/SCREENSHOTS.md](monitoring/SCREENSHOTS.md) (37 images, filenames fixed). The README already embeds them.
 - Fill in the credential placeholders: the VM password (kept in `.private/secrets.env`, not in this file), the SSH key or key path you want examiners to use, and the Docker Hub account (`angelsewase`, already set).
 - Commit `monitoring/` after the screenshots are added, and push the repository to the exam Git server.
