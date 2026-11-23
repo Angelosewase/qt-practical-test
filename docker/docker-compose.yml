@@ -1,0 +1,138 @@
+# ProjectHub stack for c3-docker-host (and local testing).
+# Compose reads docker/.env (gitignored). Create it with: make env  (or cp docker/.env.example docker/.env)
+#
+#   client -> nginx :80 -> /        -> frontend :8080 (static SPA)
+#                       -> /api/    -> api :8080 -> mongodb :27017 (required)
+#                                                -> valkey :6379   (optional cache, fails open)
+#
+# Only nginx publishes a host port. mongodb and valkey are reachable only on the "data" network.
+name: projecthub
+
+services:
+  nginx:
+    image: nginx:1.27.5-alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits: {cpus: "0.50", memory: 128M}
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        VITE_API_URL: /api
+    image: ${DOCKERHUB_USER:-local}/projecthub-frontend:${FRONTEND_TAG:-1.0.0}
+    restart: unless-stopped
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits: {cpus: "0.50", memory: 128M}
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/api.Dockerfile
+    image: ${DOCKERHUB_USER:-local}/projecthub-api:${API_TAG:-1.0.0}
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      GIN_MODE: release
+      MONGO_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/?authSource=admin
+      MONGO_DB: ${MONGO_DB:-projecthub}
+      MONGO_CONNECT_TIMEOUT: 60s
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      SEED_ENABLED: ${SEED_ENABLED:-true}
+      CACHE_ENABLED: "true"
+      VALKEY_ADDR: valkey:6379
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+      VALKEY_DB: "0"
+      CACHE_STATS_TTL: 2m
+      CACHE_USER_TTL: 1m
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      valkey:
+        # Cache is optional: the API starts and serves without Valkey, so only wait for it to start.
+        condition: service_started
+    networks: [edge, data]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits: {cpus: "1.00", memory: 512M}
+
+  mongodb:
+    image: mongo:7.0.14
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    networks: [data]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--norc", "--eval", "db.adminCommand({ping: 1}).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      resources:
+        limits: {cpus: "1.00", memory: 1G}
+
+  valkey:
+    image: valkey/valkey:8.1.12-alpine
+    restart: unless-stopped
+    # The password is read from the environment at start, not written into this file.
+    # No persistence: Valkey only caches data that MongoDB can rebuild.
+    command: ["sh", "-c", "exec valkey-server --requirepass \"$$VALKEY_PASSWORD\" --save '' --appendonly no"]
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+      # Read by valkey-cli so the password is not passed on a command line.
+      REDISCLI_AUTH: ${VALKEY_PASSWORD}
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits: {cpus: "0.50", memory: 256M}
+
+networks:
+  edge: {}
+  data: {internal: true}
+
+volumes:
+  mongo-data:
+    name: projecthub-mongo-data

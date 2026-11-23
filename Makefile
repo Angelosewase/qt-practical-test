@@ -12,7 +12,7 @@ TF_ENV = $(LOAD_SECRETS); \
 	export TF_VAR_vm_password="$$VM_PASSWORD"; \
 	export TF_VAR_ssh_public_key="$$(cat $(CURDIR)/.private/ssh/id_ed25519.pub)"
 
-.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output
+.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -43,3 +43,35 @@ tf-apply: ## terraform apply the saved plan (creates the 4 VMs)
 
 tf-output: ## Show VM names and IP addresses
 	cd iac && $(TF_ENV) && terraform output
+
+COMPOSE = docker compose -f docker/docker-compose.yml
+
+env: ## Create docker/.env with generated secrets (kept if it exists)
+	scripts/gen-env.sh
+
+hadolint: ## Lint the Dockerfiles
+	hadolint docker/api.Dockerfile docker/frontend.Dockerfile
+
+compose-config: ## Validate docker-compose.yml and its env file
+	$(COMPOSE) config -q && echo "compose config OK"
+
+docker-build: ## Build both app images locally (tags from docker/.env)
+	$(COMPOSE) build
+
+docker-push: ## Log in to Docker Hub from .private/secrets.env, build, and push the app images
+	set -a; . $(CURDIR)/.private/secrets.env; set +a; \
+	test -n "$$DOCKERHUB_USER" && test -n "$$DOCKERHUB_TOKEN" && ! echo "$$DOCKERHUB_USER" | grep -q '<' || { echo "DOCKERHUB_USER/DOCKERHUB_TOKEN not set in .private/secrets.env"; exit 1; }; \
+	echo "$$DOCKERHUB_TOKEN" | docker login -u "$$DOCKERHUB_USER" --password-stdin >/dev/null; \
+	DOCKERHUB_USER="$$DOCKERHUB_USER" $(COMPOSE) build && DOCKERHUB_USER="$$DOCKERHUB_USER" $(COMPOSE) push api frontend
+
+compose-up: ## Start the full stack (builds if needed); nginx on port 80
+	$(COMPOSE) up -d --build
+
+compose-down: ## Stop the stack (keeps the mongo-data volume)
+	$(COMPOSE) down
+
+compose-logs: ## Tail logs of every service (add SERVICE=api to narrow)
+	$(COMPOSE) logs --tail=100 $(SERVICE)
+
+verify: ## Functional checks against the local stack (BASE_URL overrides)
+	scripts/verify.sh $${BASE_URL:-http://localhost}

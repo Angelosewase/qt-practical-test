@@ -18,3 +18,7 @@ kubeconfig*
 *.tfplan
 tfplan
 tfplan.*
+
+# Environment files (only .env.example is tracked)
+.env.*
+!.env.example
