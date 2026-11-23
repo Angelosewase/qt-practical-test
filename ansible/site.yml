@@ -1,5 +1,11 @@
 ---
-# Task 3 entry point. The cluster roles (kubeadm init, join, Flannel) are added in the next step.
+# Task 1 access, then Task 3 cluster. Run with: make ansible-run
+- name: Set the devops password and SSH access on every VM
+  hosts: all
+  tags: [vm_access]
+  roles:
+    - vm_access
+
 - name: Prepare every Kubernetes node
   hosts: k8s_cluster
   become: true
@@ -8,3 +14,20 @@
     - kubernetes_prereqs
     - containerd
     - kubernetes_packages
+
+- name: Initialise the control plane and install Flannel
+  hosts: k8s_master
+  become: true
+  roles:
+    - k8s_control_plane
+
+- name: Join the workers
+  hosts: k8s_workers
+  become: true
+  roles:
+    - k8s_worker
+
+- name: Verify the cluster
+  hosts: k8s_master
+  roles:
+    - k8s_verify

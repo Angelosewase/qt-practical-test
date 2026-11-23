@@ -17,10 +17,13 @@ qt-practical-test/
 │   ├── ansible.cfg        Inventory path, roles path, pipelining, host key policy
 │   ├── inventory.example.ini   Template with placeholders
 │   ├── inventory.ini      GENERATED from terraform output (gitignored: real IPs)
+│   ├── .ansible-lint      Lint config (excludes the vendored manifest in files/)
 │   ├── requirements.yml   Pinned collections (ansible.posix, community.general)
+│   ├── files/             Vendored kube-flannel v0.28.11 manifest (byte-identical to upstream)
 │   ├── group_vars/all.yml Kubernetes version pins and pod CIDR
 │   ├── site.yml           Entry point
-│   └── roles/             common, kubernetes_prereqs, containerd, kubernetes_packages
+│   └── roles/             vm_access (devops password, SSH), common, kubernetes_prereqs,
+│                          containerd, kubernetes_packages, k8s_control_plane, k8s_worker, k8s_verify
 ├── docker/                Task 2: Dockerfiles, nginx configs, docker-compose.yml, .env.example
 │   ├── api.Dockerfile     Go build, Alpine runtime, uid 10001
 │   ├── frontend.Dockerfile   Node build, unprivileged nginx runtime, uid 101

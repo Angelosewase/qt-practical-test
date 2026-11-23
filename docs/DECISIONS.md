@@ -229,3 +229,39 @@ The VMs use DHCP (the template's `ip=dhcp`). The IPs are recorded here, but a DH
 ## D-ANS-6. iothread warning left in place
 
 `terraform apply` warns that `iothread` is ignored on `virtio-scsi-pci`. Setting `iothread = false` made Terraform plan an in-place update on all four VMs. Proxmox ignores the flag on this controller, so it has no effect. Leaving the configuration as it was avoids touching freshly created VMs. The warning is cosmetic.
+
+## D-CL-1. Cluster build: kubeadm, containerd, Flannel
+
+- kubeadm 1.32.5 on a control plane at `192.168.160.17`, with pod CIDR `10.244.0.0/16`, `--node-name` set to the inventory hostname, and `--apiserver-advertise-address` set to the VM's own IP.
+- Flannel v0.28.11, vendored into `ansible/files/kube-flannel-v0.28.11.yml` (sha256 `bc9e5462…8133`). The playbook does not download anything at run time, so a rerun cannot pick up a different manifest. Its default network is `10.244.0.0/16`, matching the CIDR.
+- containerd 2.1.9 with `SystemdCgroup = true`. kubeadm 1.32 defaults the kubelet to the systemd driver, and Kali runs cgroup v2 (`cgroup2fs`), so the two agree.
+
+## D-CL-2. Kali's containerd config is replaced
+
+Kali's `containerd` package ships a minimal `/etc/containerd/config.toml` (255 bytes). A "creates" guard kept that file, so the cgroup setting was never written. The role now writes the full `containerd config default`, with `SystemdCgroup = true`, and replaces the file only when its content differs. A verification task fails the run if the setting is missing.
+
+## D-CL-3. kubelet reads the real resolver config
+
+Kali's `/etc/resolv.conf` points at the systemd-resolved stub (`127.0.0.53`). Without a fix, CoreDNS would detect a forwarding loop. `/etc/default/kubelet` sets `--resolv-conf=/run/systemd/resolve/resolv.conf`. Verified: CoreDNS logs show zero loop messages.
+
+## D-CL-4. Idempotent join and init
+
+- `kubeadm init` runs only when `/etc/kubernetes/admin.conf` is missing (`stat` guard).
+- A worker joins only when `/etc/kubernetes/kubelet.conf` is missing. The join command is requested from the control plane only in that case, with a one-hour token, so rerunning the playbook never creates new tokens.
+- Tasks that print tokens use `no_log`, so bootstrap tokens and discovery hashes never reach the logs or the evidence file. Checked: none present.
+
+## D-CL-5. Kernel 7.1 and cgroups: no issue observed
+
+The Kali kernel is 7.1.5, newer than Kubernetes 1.32's tested LTS kernels. The cluster initialised, joined, and reached Ready on all nodes with no kubelet or cgroup errors. The risk is recorded, not an active problem.
+
+## D-CL-6. The devops kubeconfig
+
+`/home/devops/.kube/config` is a copy of the cluster admin config, owned by devops with mode 0600. Verified by logging in as devops over SSH and running `kubectl get nodes`. Copying the admin credential to a login user is acceptable on this single-tenant exam cluster. The tradeoff is that devops has cluster-admin rights, and this is noted.
+
+## D-CL-7. Password step is separate from the cluster build
+
+The devops password step (`roles/vm_access`) is in the playbook, tagged `vm_access`. It needs `VM_PASSWORD` in `.private/secrets.env`. That value was empty when the cluster was built, so this run used `--skip-tags vm_access`. The password is applied with `chpasswd` from stdin, with `no_log`. It is compared by hash first, so reruns change nothing when the password matches. The comparison logic was tested locally with a known match and a wrong value. Password login is enabled through `/etc/ssh/sshd_config.d/10-exam-access.conf` (validated with `sshd -t` before reload), and key login stays enabled.
+
+## D-CL-8. Terraform and the password
+
+`TF_VAR_vm_password` is taken from the same `VM_PASSWORD`. Changing that value makes Terraform plan a change to the VMs' cloud-init user settings. The VMs must not be replaced for a password change, so the password is set with Ansible and Terraform is not re-applied for it. Running `make tf-apply` after a password change would plan an update; avoid it.

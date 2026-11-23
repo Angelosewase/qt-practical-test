@@ -1,0 +1,5 @@
+---
+vm_access_username: devops
+# Read from the controller's environment (sourced from .private/secrets.env by make ansible-run).
+# Never stored in this repository; every task that touches it uses no_log.
+vm_access_password: "{{ lookup('ansible.builtin.env', 'VM_PASSWORD') }}"

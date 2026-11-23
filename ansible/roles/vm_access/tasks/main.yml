@@ -1,0 +1,53 @@
+---
+- name: Require a usable VM password (the value is not shown)
+  ansible.builtin.assert:
+    that:
+      - vm_access_password | length >= 12
+    fail_msg: "VM_PASSWORD must be set in .private/secrets.env (at least 12 characters). Run through make ansible-run."
+    success_msg: "VM password is available from the environment"
+
+- name: Check whether the devops password already matches (compares hashes, prints nothing)
+  ansible.builtin.shell: |
+    set -o pipefail
+    current="$(getent shadow {{ vm_access_username }} | cut -d: -f2)"
+    salt="$(printf '%s' "$current" | cut -d'$' -f3)"
+    if [ -n "$salt" ] && [ "$(openssl passwd -6 -salt "$salt" "$VM_PW")" = "$current" ]; then
+      echo MATCH
+    else
+      echo DIFFERENT
+    fi
+  environment:
+    VM_PW: "{{ vm_access_password }}"
+  register: vm_access_password_check
+  changed_when: false
+  check_mode: false
+  become: true
+  no_log: true
+
+- name: Set the devops password (value on stdin, never in arguments or logs)
+  ansible.builtin.command:
+    argv: [chpasswd]
+    stdin: "{{ vm_access_username }}:{{ vm_access_password }}"
+    stdin_add_newline: true
+  become: true
+  no_log: true
+  changed_when: true
+  when: vm_access_password_check.stdout != 'MATCH'
+
+- name: Allow password login for examiners (key login stays enabled)
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/10-exam-access.conf
+    content: |
+      # Managed by Ansible (roles/vm_access). Examiners may log in with the devops password or the key.
+      PasswordAuthentication yes
+      PubkeyAuthentication yes
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+  notify: Restart ssh
+
+- name: Validate the sshd configuration before it is reloaded
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+  become: true

@@ -1,0 +1,65 @@
+---
+- name: Check whether the control plane is already initialised
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: k8s_control_plane_admin_conf
+
+# kubeadm init prints a bootstrap token, so its output is hidden from logs.
+- name: Initialise the control plane (kubeadm init)
+  ansible.builtin.command:
+    argv:
+      - kubeadm
+      - init
+      - "--kubernetes-version=v{{ k8s_version }}"
+      - "--pod-network-cidr={{ pod_network_cidr }}"
+      - "--apiserver-advertise-address={{ ansible_host }}"
+      - "--node-name={{ inventory_hostname }}"
+  become: true
+  no_log: true
+  changed_when: true
+  when: not k8s_control_plane_admin_conf.stat.exists
+
+- name: Create the devops kubeconfig directory
+  ansible.builtin.file:
+    path: /home/devops/.kube
+    state: directory
+    owner: devops
+    group: devops
+    mode: "0700"
+  become: true
+
+- name: Create the devops kubeconfig (copy of the cluster admin config)
+  ansible.builtin.copy:
+    remote_src: true
+    src: /etc/kubernetes/admin.conf
+    dest: /home/devops/.kube/config
+    owner: devops
+    group: devops
+    mode: "0600"
+  become: true
+
+- name: Create the addons directory
+  ansible.builtin.file:
+    path: /etc/kubernetes/addons
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Install the pinned Flannel manifest (vendored in ansible/files)
+  ansible.builtin.copy:
+    src: kube-flannel-v0.28.11.yml
+    dest: /etc/kubernetes/addons/kube-flannel.yml
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+
+- name: Apply Flannel (CNI, pod network {{ pod_network_cidr }})
+  ansible.builtin.command: kubectl apply -f /etc/kubernetes/addons/kube-flannel.yml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  register: k8s_control_plane_flannel_apply
+  changed_when: "'created' in k8s_control_plane_flannel_apply.stdout or 'configured' in k8s_control_plane_flannel_apply.stdout"

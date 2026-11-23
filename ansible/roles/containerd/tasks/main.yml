@@ -10,17 +10,25 @@
     state: directory
     mode: "0755"
 
-- name: Generate the default containerd configuration
-  ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
+# Kali's package ships a minimal config.toml, so a "creates:" guard would keep it and skip the full defaults.
+# The full default config is written with the systemd cgroup driver, and replaced only when it differs.
+# Check mode skips this task, because containerd is not installed yet at that point.
+- name: Write the full containerd config with the systemd cgroup driver (kubelet requires it)
+  ansible.builtin.shell: |
+    set -o pipefail
+    containerd config default | sed 's/SystemdCgroup = false/SystemdCgroup = true/' > /etc/containerd/config.toml.new
+    if cmp -s /etc/containerd/config.toml.new /etc/containerd/config.toml; then
+      rm -f /etc/containerd/config.toml.new
+      echo UNCHANGED
+    else
+      mv /etc/containerd/config.toml.new /etc/containerd/config.toml
+      echo CHANGED
+    fi
   args:
-    creates: /etc/containerd/config.toml
-
-# Check mode does not run the shell task above, so the file would not exist yet.
-- name: Use systemd cgroup driver (required by kubelet)
-  ansible.builtin.replace:
-    path: /etc/containerd/config.toml
-    regexp: 'SystemdCgroup = false'
-    replace: 'SystemdCgroup = true'
+    executable: /bin/bash
+  register: containerd_config
+  # Exact match on the last line: 'UNCHANGED' contains 'CHANGED', so a substring test would restart containerd on every run.
+  changed_when: containerd_config.stdout_lines[-1] == 'CHANGED'
   notify: Restart containerd
   when: not ansible_check_mode
 

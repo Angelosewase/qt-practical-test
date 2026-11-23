@@ -1,0 +1,84 @@
+# Task 3 evidence: Kubernetes cluster via Ansible (generated 2026-11-23T09:09:14Z)
+# Bootstrap tokens and join commands are hidden (no_log). No secrets are printed.
+
+## 1. kubectl as devops on the control plane (kubeconfig in /home/devops/.kube/config)
+Client Version: v1.32.5
+Kustomize Version: v5.5.0
+Server Version: v1.32.5
+
+NAME              STATUS   ROLES           AGE     VERSION   INTERNAL-IP      EXTERNAL-IP   OS-IMAGE                 KERNEL-VERSION           CONTAINER-RUNTIME
+c3-k8s-master     Ready    control-plane   4m34s   v1.32.5   192.168.160.17   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown
+c3-k8s-worker-1   Ready    <none>          3m18s   v1.32.5   192.168.160.33   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown
+c3-k8s-worker-2   Ready    <none>          3m18s   v1.32.5   192.168.160.98   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown
+
+NAMESPACE      NAME                                    READY   STATUS    RESTARTS   AGE     IP               NODE              NOMINATED NODE   READINESS GATES
+kube-flannel   kube-flannel-ds-5nt56                   1/1     Running   0          3m18s   192.168.160.98   c3-k8s-worker-2   <none>           <none>
+kube-flannel   kube-flannel-ds-df6zk                   1/1     Running   0          3m22s   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-flannel   kube-flannel-ds-l9ghh                   1/1     Running   0          3m18s   192.168.160.33   c3-k8s-worker-1   <none>           <none>
+kube-system    coredns-668d6bf9bc-skpxg                1/1     Running   0          4m25s   10.244.0.2       c3-k8s-master     <none>           <none>
+kube-system    coredns-668d6bf9bc-z6lbp                1/1     Running   0          4m25s   10.244.0.3       c3-k8s-master     <none>           <none>
+kube-system    etcd-c3-k8s-master                      1/1     Running   0          4m31s   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-system    kube-apiserver-c3-k8s-master            1/1     Running   0          4m31s   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-system    kube-controller-manager-c3-k8s-master   1/1     Running   0          4m31s   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-system    kube-proxy-hrkx6                        1/1     Running   0          3m18s   192.168.160.98   c3-k8s-worker-2   <none>           <none>
+kube-system    kube-proxy-k8nl2                        1/1     Running   0          4m26s   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-system    kube-proxy-mbsk4                        1/1     Running   0          3m18s   192.168.160.33   c3-k8s-worker-1   <none>           <none>
+kube-system    kube-scheduler-c3-k8s-master            1/1     Running   0          4m31s   192.168.160.17   c3-k8s-master     <none>           <none>
+
+-rw------- 1 devops devops 5658 Nov 23 09:04 /home/devops/.kube/config
+kubeconfig mode=600 owner=devops
+
+## 2. Node status and kubelet (each VM, read-only)
+--- 192.168.160.17
+kubelet=active containerd=active
+swap_total_kb=0
+br_netfilter=1 overlay=1
+ip_forward=1 bridge_iptables=1
+containerd_systemd_cgroup=1
+kubelet_resolv=KUBELET_EXTRA_ARGS=--resolv-conf=/run/systemd/resolve/resolv.conf
+kube_packages_held=kubeadm kubectl kubelet 
+kubelet_version=Kubernetes v1.32.5
+--- 192.168.160.33
+kubelet=active containerd=active
+swap_total_kb=0
+br_netfilter=1 overlay=1
+ip_forward=1 bridge_iptables=1
+containerd_systemd_cgroup=1
+kubelet_resolv=KUBELET_EXTRA_ARGS=--resolv-conf=/run/systemd/resolve/resolv.conf
+kube_packages_held=kubeadm kubectl kubelet 
+kubelet_version=Kubernetes v1.32.5
+--- 192.168.160.98
+kubelet=active containerd=active
+swap_total_kb=0
+br_netfilter=1 overlay=1
+ip_forward=1 bridge_iptables=1
+containerd_systemd_cgroup=1
+kubelet_resolv=KUBELET_EXTRA_ARGS=--resolv-conf=/run/systemd/resolve/resolv.conf
+kube_packages_held=kubeadm kubectl kubelet 
+kubelet_version=Kubernetes v1.32.5
+
+## 3. CoreDNS (no forwarding loop reported)
+loop_messages=0
+
+## 4. Ansible idempotency (second and third full runs of the cluster plays)
+### run 6 (after the containerd fix): all hosts
+PLAY RECAP *********************************************************************
+c3-k8s-master              : ok=34   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
+c3-k8s-worker-1            : ok=21   changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+c3-k8s-worker-2            : ok=21   changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+
+handlers_run=0
+
+### run 4 (first build, for comparison)
+PLAY RECAP *********************************************************************
+c3-k8s-master              : ok=35   changed=5    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
+c3-k8s-worker-1            : ok=24   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+c3-k8s-worker-2            : ok=24   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+
+
+## 5. Final node check from the Ansible verify step (run 6)
+        "c3-k8s-master     Ready    control-plane   3m58s   v1.32.5   192.168.160.17   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown",
+        "c3-k8s-worker-1   Ready    <none>          2m42s   v1.32.5   192.168.160.33   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown",
+        "c3-k8s-worker-2   Ready    <none>          2m42s   v1.32.5   192.168.160.98   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown"
+TASK [k8s_verify : Count Ready nodes (must be the three cluster nodes)] ********
+TASK [k8s_verify : Assert three Ready nodes] ***********************************

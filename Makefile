@@ -120,3 +120,6 @@ ansible-ping: ## Ping every host in the inventory
 
 ansible-deps: ## Install the pinned Ansible collections
 	cd ansible && ansible-galaxy collection install -r requirements.yml
+
+ansible-run: ## Run the full playbook. Sources .private/secrets.env so VM_PASSWORD reaches the VMs (no_log)
+	cd ansible && set -a && . $(CURDIR)/.private/secrets.env && set +a && ansible-playbook site.yml

@@ -46,3 +46,12 @@
     name: kubelet
     enabled: true
   when: not ansible_check_mode
+
+# Kali's resolv.conf points at systemd-resolved (127.0.0.53). CoreDNS would then detect a forwarding loop,
+# so kubelet is told to read the real upstream resolver list.
+- name: Point kubelet at the upstream resolver config (avoids CoreDNS loop on the systemd stub)
+  ansible.builtin.copy:
+    dest: /etc/default/kubelet
+    content: |
+      KUBELET_EXTRA_ARGS=--resolv-conf=/run/systemd/resolve/resolv.conf
+    mode: "0644"

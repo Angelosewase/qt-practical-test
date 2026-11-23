@@ -14,7 +14,7 @@ Docker Compose on one VM, and Kubernetes on a three-node kubeadm cluster.
 |---|---|
 | Repo layout, secrets handling, pre-commit secret guard | Done |
 | Task 1: Terraform VMs (`iac/`) | **Applied.** Four Kali VMs running, verified over SSH as `devops`. Evidence in `monitoring/task1-evidence.txt` |
-| Task 3 prerequisites (`ansible/`) | Roles written for Kali; syntax, lint (production profile) and ping pass; check-mode dry run passes. **Full playbook not run yet** |
+| Task 3: Kubernetes cluster (`ansible/`) | **Built and verified**: kubeadm 1.32.5 control plane, Flannel, two workers, three Ready nodes. Second cluster run changed nothing. The devops password step is written but **waits for `VM_PASSWORD`** |
 | App analysis and move into `app/` | Done |
 | Task 2: Docker images and Compose (`docker/`) | Built and tested on this machine (34 of 34 functional checks, cache and database outages). **Not pushed:** Docker Hub credentials are placeholders |
 | Task 3: Ansible Kubernetes cluster (`ansible/`) | Not started (needs the VMs) |
@@ -102,6 +102,30 @@ The IPs come from DHCP. Run `make tf-output` to confirm them, then `make invento
 - SSH private key: **[PLACEHOLDER: add the key path or key to share with examiners before submission]**
 
 Do not write real credentials in this file.
+
+## Kubernetes cluster via Ansible (Task 3)
+
+Run from the laptop. The playbook prepares every node, initialises the control plane, installs Flannel, joins the
+workers, and checks for three Ready nodes.
+
+```bash
+make setup          # pre-commit secret guard (once)
+make tf-output      # confirm the IPs
+make inventory      # write ansible/inventory.ini from them (gitignored)
+make ansible-lint   # production profile
+make ansible-syntax # syntax check
+make ansible-ping   # reachability
+make ansible-run    # full playbook (sources .private/secrets.env for VM_PASSWORD)
+```
+
+The cluster-side checks are saved to `monitoring/task3-evidence.txt`. Running `make ansible-run` again is safe:
+the second run reports `changed=0` on every host.
+
+Cluster versions: Kubernetes v1.32.5 (kubeadm, kubelet, kubectl, packages held), containerd 2.1.9, Flannel v0.28.11
+(vendored in `ansible/files/`), pod network `10.244.0.0/16`, OS Kali GNU/Linux Rolling with kernel 7.1.5.
+
+Kubectl access: the control plane has `/home/devops/.kube/config` (copy of the admin kubeconfig, mode 0600).
+From the laptop, copy it to `.private/kubeconfig` and point `KUBECONFIG` at it for `make k8s-deploy`.
 
 ## Docker Compose deployment (Task 2)
 

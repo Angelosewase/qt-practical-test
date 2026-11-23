@@ -1,0 +1,24 @@
+---
+- name: Check whether this node already joined the cluster
+  ansible.builtin.stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: k8s_worker_kubelet_conf
+
+# A fresh one-hour token is requested only when the node has not joined yet. The join command carries the token,
+# so it is never printed.
+- name: Create a join command on the control plane
+  ansible.builtin.command: kubeadm token create --print-join-command --ttl 1h
+  delegate_to: "{{ groups['k8s_master'][0] }}"
+  become: true
+  register: k8s_worker_join_command
+  changed_when: false
+  no_log: true
+  when: not k8s_worker_kubelet_conf.stat.exists
+
+- name: Join this worker to the cluster
+  ansible.builtin.command: "{{ k8s_worker_join_command.stdout }} --node-name {{ inventory_hostname }}"
+  become: true
+  no_log: true
+  args:
+    creates: /etc/kubernetes/kubelet.conf
+  when: not k8s_worker_kubelet_conf.stat.exists

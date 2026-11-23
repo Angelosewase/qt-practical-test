@@ -1,0 +1,46 @@
+---
+- name: Wait until every node reports Ready
+  ansible.builtin.command: kubectl wait --for=condition=Ready node --all --timeout=600s
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  changed_when: false
+
+- name: List the nodes
+  ansible.builtin.command: kubectl get nodes -o wide
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  register: k8s_verify_nodes
+  changed_when: false
+
+- name: Show the nodes
+  ansible.builtin.debug:
+    var: k8s_verify_nodes.stdout_lines
+
+- name: Count Ready nodes (must be the three cluster nodes)
+  ansible.builtin.command: kubectl get nodes --no-headers
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  register: k8s_verify_node_rows
+  changed_when: false
+
+- name: Assert three Ready nodes
+  ansible.builtin.assert:
+    that:
+      - (k8s_verify_node_rows.stdout_lines | select('search', ' Ready') | list | length) == 3
+    fail_msg: "Expected 3 Ready nodes"
+    success_msg: "3 nodes are Ready"
+
+- name: Show system pods
+  ansible.builtin.command: kubectl get pods -n kube-system -o wide
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  register: k8s_verify_pods
+  changed_when: false
+
+- name: Show system pods (output)
+  ansible.builtin.debug:
+    var: k8s_verify_pods.stdout_lines
