@@ -463,3 +463,7 @@ The release runs in `qt-spring-app-helm` on NodePort 30081 and leaves the main d
 
 The condition for this bonus was a calm cluster after the Helm install. The install (about 15 objects and 8 pods) caused 11 etcd `slow fdatasync` warnings in 43 s, the worst 6.4 s. The scheduler and the controller-manager lost their leases and restarted once each (13:26 UTC). Both recovered within a minute, but that is the instability described in D-STOR-1. A Gateway API install means vendored CRDs, a controller with its own leader election, and a Gateway and HTTPRoutes. It adds steady and burst load on the same etcd, so it was skipped. NodePort 30080 stays the main URL, served by the nginx gateway Deployment.
 
+
+## D-SEC-2. The VM password is allowed in README.md only
+
+The brief requires the VM login credentials in the submission, so the owner wrote the `devops` password into the README. `scripts/secret-scan.sh` now treats `VM_PASSWORD` as a submitted credential. It is allowed in `README.md` and still reported in any other file, in staged changes outside the README, and anywhere in history outside the README. The Proxmox token, the GitLab and Docker Hub tokens and the application secrets stay blocked everywhere. A test file holding the password outside the README was caught before this rule was committed.

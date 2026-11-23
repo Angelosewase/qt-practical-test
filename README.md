@@ -27,9 +27,7 @@ Both deployments are running and pass the same 39 functional checks.
 
 **VM login**
 
-- SSH user: `devops` (sudo without a password), for example `ssh devops@192.168.160.11`
-- Password: **[PLACEHOLDER: the owner adds the VM password here before submission]**
-- Key login also works for the key pair that created the VMs. The private key is not in the repository.
+- The SSH username and password for the four VMs are sent to the examiners separately with the submission. They are not stored in this repository.
 
 **Application test accounts** (created on the first start of an empty database)
 
@@ -56,11 +54,11 @@ The full requirement-by-requirement table, with the file and the evidence for ea
 
 | Brief section | Weight | Where | Status |
 |---|---|---|---|
-| Task 1: Terraform VMs | 20% | `iac/` | done (password placeholder for the owner) |
+| Task 1: Terraform VMs | 20% | `iac/` | done |
 | Task 2: Docker Compose | 15% | `docker/` | done |
 | Task 3: Kubernetes cluster with Ansible | 20% | `ansible/` | done |
 | Task 4: Kubernetes deployment and resilience | 20% | `k8s/`, `scripts/resilience-demo.sh` | done |
-| Task 5: Monitoring | 10% | `monitoring/` | done, except two screenshot types (`ps` and `vmstat`); those exist as text only |
+| Task 5: Monitoring | 10% | `monitoring/` | done |
 | Documentation and structure | 10% | this README, `docs/` | done |
 | Application functionality | 5% | `scripts/verify.sh` | done, except search: the app has no search feature |
 | Bonus: Helm | +5 | `k8s/helm/`, see [Bonus](#bonus) | done (second copy on NodePort 30081) |
@@ -320,20 +318,22 @@ There is no search feature in the application, so the brief's "search diary entr
 ## Monitoring
 
 Every screenshot below was taken on the real VM (the prompt and the window title show `devops@<vm>`) while both
-deployments were running. The same data, plus `ps` and `vmstat`, is saved as text with UTC timestamps by
+deployments were running. The same data is also saved as text with UTC timestamps by
 `make collect-monitoring` (read-only) in `monitoring/<vm>/collect-20261123T112333Z.txt`. `kubectl top` uses
 metrics-server, installed by the `k8s_metrics` role.
 
 ### Every VM: processes, disk, memory, load, ports
 
-| VM | `top -b -n 1 \| head -n 25` | `df -h` | `free -h` | `uptime` | `sudo ss -tulpn` |
-|---|---|---|---|---|---|
-| c3-docker-host | [top](monitoring/screenshots/c3-docker-host-top.png) | [df](monitoring/screenshots/c3-docker-host-df.png) | [free](monitoring/screenshots/c3-docker-host-free.png) | [uptime](monitoring/screenshots/c3-docker-host-uptime.png) | [ss](monitoring/screenshots/c3-docker-host-ss.png) |
-| c3-k8s-master | [top](monitoring/screenshots/c3-k8s-master-top.png) | [df](monitoring/screenshots/c3-k8s-master-df.png) | [free](monitoring/screenshots/c3-k8s-master-free.png) | [uptime](monitoring/screenshots/c3-k8s-master-uptime.png) | [ss](monitoring/screenshots/c3-k8s-master-ss.png) |
-| c3-k8s-worker-1 | [top](monitoring/screenshots/c3-k8s-worker-1-top.png) | [df](monitoring/screenshots/c3-k8s-worker-1-df.png) | [free](monitoring/screenshots/c3-k8s-worker-1-free.png) | [uptime](monitoring/screenshots/c3-k8s-worker-1-uptime.png) | [ss](monitoring/screenshots/c3-k8s-worker-1-ss.png) |
-| c3-k8s-worker-2 | [top](monitoring/screenshots/c3-k8s-worker-2-top.png) | [df](monitoring/screenshots/c3-k8s-worker-2-df.png) | [free](monitoring/screenshots/c3-k8s-worker-2-free.png) | [uptime](monitoring/screenshots/c3-k8s-worker-2-uptime.png) | [ss](monitoring/screenshots/c3-k8s-worker-2-ss.png) |
+| VM | `top -b -n 1 \| head -n 25` | `ps aux --sort=-%cpu \| head -n 25` | `vmstat -w 1 5` | `df -h` | `free -h` | `uptime` | `sudo ss -tulpn` |
+|---|---|---|---|---|---|---|---|
+| c3-docker-host | [top](monitoring/screenshots/c3-docker-host-top.png) | [ps](monitoring/screenshots/c3-docker-host-ps.png) | [vmstat](monitoring/screenshots/c3-docker-host-vmstat.png) | [df](monitoring/screenshots/c3-docker-host-df.png) | [free](monitoring/screenshots/c3-docker-host-free.png) | [uptime](monitoring/screenshots/c3-docker-host-uptime.png) | [ss](monitoring/screenshots/c3-docker-host-ss.png) |
+| c3-k8s-master | [top](monitoring/screenshots/c3-k8s-master-top.png) | [ps](monitoring/screenshots/c3-k8s-master-ps.png) | [vmstat](monitoring/screenshots/c3-k8s-master-vmstat.png) | [df](monitoring/screenshots/c3-k8s-master-df.png) | [free](monitoring/screenshots/c3-k8s-master-free.png) | [uptime](monitoring/screenshots/c3-k8s-master-uptime.png) | [ss](monitoring/screenshots/c3-k8s-master-ss.png) |
+| c3-k8s-worker-1 | [top](monitoring/screenshots/c3-k8s-worker-1-top.png) | [ps](monitoring/screenshots/c3-k8s-worker-1-ps.png) | [vmstat](monitoring/screenshots/c3-k8s-worker-1-vmstat.png) | [df](monitoring/screenshots/c3-k8s-worker-1-df.png) | [free](monitoring/screenshots/c3-k8s-worker-1-free.png) | [uptime](monitoring/screenshots/c3-k8s-worker-1-uptime.png) | [ss](monitoring/screenshots/c3-k8s-worker-1-ss.png) |
+| c3-k8s-worker-2 | [top](monitoring/screenshots/c3-k8s-worker-2-top.png) | [ps](monitoring/screenshots/c3-k8s-worker-2-ps.png) | [vmstat](monitoring/screenshots/c3-k8s-worker-2-vmstat.png) | [df](monitoring/screenshots/c3-k8s-worker-2-df.png) | [free](monitoring/screenshots/c3-k8s-worker-2-free.png) | [uptime](monitoring/screenshots/c3-k8s-worker-2-uptime.png) | [ss](monitoring/screenshots/c3-k8s-worker-2-ss.png) |
 
-What each one shows: **top**: CPU split, memory, task counts, load average and the busiest processes. **df -h**:
+What each one shows: **top**: CPU split, memory, task counts, load average and the busiest processes. **ps**: every
+process with its CPU and memory share, sorted by CPU (first 25 lines). **vmstat**: run queue, memory, swap, block I/O
+in and out (`bi`, `bo`), interrupts, context switches and CPU split including I/O wait (`wa`), once a second for 5 s. **df -h**:
 space per partition. **free -h**: total, used and available memory (no swap, as Kubernetes expects). **uptime**:
 time since boot and the 1, 5 and 15 minute load averages. **ss -tulpn**: listening TCP and UDP ports and the process behind each.
 
@@ -341,6 +341,12 @@ time since boot and the 1, 5 and 15 minute load averages. **ss -tulpn**: listeni
 
 ![c3-docker-host top](monitoring/screenshots/c3-docker-host-top.png)
 *`top`: CPU, memory, load and the busiest processes on the Docker host.*
+
+![c3-docker-host ps](monitoring/screenshots/c3-docker-host-ps.png)
+*`ps aux --sort=-%cpu | head -n 25`: processes by CPU and memory on the Docker host: mongod, dockerd, containerd, the Go API (uid 10001) and valkey-server.*
+
+![c3-docker-host vmstat](monitoring/screenshots/c3-docker-host-vmstat.png)
+*`vmstat -w 1 5`: virtual memory, block I/O and CPU on the Docker host: no swap, almost no block I/O, CPU 94 to 100% idle.*
 
 ![c3-docker-host df](monitoring/screenshots/c3-docker-host-df.png)
 *`df -h`: disk space per partition.*
@@ -359,6 +365,12 @@ time since boot and the 1, 5 and 15 minute load averages. **ss -tulpn**: listeni
 ![c3-k8s-master top](monitoring/screenshots/c3-k8s-master-top.png)
 *`top`: CPU, memory, load and the busiest processes on the control plane.*
 
+![c3-k8s-master ps](monitoring/screenshots/c3-k8s-master-ps.png)
+*`ps aux --sort=-%cpu | head -n 25`: processes by CPU and memory on the control plane: kube-apiserver, kubelet, etcd, kube-controller-manager, kube-scheduler, CoreDNS and Flannel.*
+
+![c3-k8s-master vmstat](monitoring/screenshots/c3-k8s-master-vmstat.png)
+*`vmstat -w 1 5`: virtual memory, block I/O and CPU on the control plane: no swap, small block writes (`bo`), CPU 91 to 98% idle, I/O wait 6% on the first sample only.*
+
 ![c3-k8s-master df](monitoring/screenshots/c3-k8s-master-df.png)
 *`df -h`: disk space per partition.*
 
@@ -375,6 +387,12 @@ time since boot and the 1, 5 and 15 minute load averages. **ss -tulpn**: listeni
 
 ![c3-k8s-worker-1 top](monitoring/screenshots/c3-k8s-worker-1-top.png)
 *`top`: CPU, memory, load and the busiest processes on worker-1.*
+
+![c3-k8s-worker-1 ps](monitoring/screenshots/c3-k8s-worker-1-ps.png)
+*`ps aux --sort=-%cpu | head -n 25`: processes by CPU and memory on the worker-1: kubelet, containerd, mongod (the main MongoDB), two API pods and kube-proxy.*
+
+![c3-k8s-worker-1 vmstat](monitoring/screenshots/c3-k8s-worker-1-vmstat.png)
+*`vmstat -w 1 5`: virtual memory, block I/O and CPU on the worker-1: no swap, little block I/O, CPU 90 to 98% idle.*
 
 ![c3-k8s-worker-1 df](monitoring/screenshots/c3-k8s-worker-1-df.png)
 *`df -h`: disk space per partition (the MongoDB volume is under `/srv/projecthub/mongo` on this node).*
@@ -393,6 +411,12 @@ time since boot and the 1, 5 and 15 minute load averages. **ss -tulpn**: listeni
 ![c3-k8s-worker-2 top](monitoring/screenshots/c3-k8s-worker-2-top.png)
 *`top`: CPU, memory, load and the busiest processes on worker-2.*
 
+![c3-k8s-worker-2 ps](monitoring/screenshots/c3-k8s-worker-2-ps.png)
+*`ps aux --sort=-%cpu | head -n 25`: processes by CPU and memory on the worker-2: kubelet, containerd, mongod (the Helm copy's MongoDB), API and Valkey pods, and metrics-server.*
+
+![c3-k8s-worker-2 vmstat](monitoring/screenshots/c3-k8s-worker-2-vmstat.png)
+*`vmstat -w 1 5`: virtual memory, block I/O and CPU on the worker-2: no swap, little block I/O, CPU 83 to 99% idle.*
+
 ![c3-k8s-worker-2 df](monitoring/screenshots/c3-k8s-worker-2-df.png)
 *`df -h`: disk space per partition.*
 
@@ -405,8 +429,7 @@ time since boot and the 1, 5 and 15 minute load averages. **ss -tulpn**: listeni
 ![c3-k8s-worker-2 ss](monitoring/screenshots/c3-k8s-worker-2-ss.png)
 *`sudo ss -tulpn`: kubelet 10250, kube-proxy 10256, Flannel VXLAN UDP 8472 and SSH.*
 
-**Disk I/O, virtual memory and the full process list** (`vmstat 1 3`, `ps` sorted by CPU and by memory) are in the text
-snapshot of each VM: [docker host](monitoring/c3-docker-host/collect-20261123T112333Z.txt),
+The same data, with `ps` also sorted by memory, is in the text snapshot of each VM: [docker host](monitoring/c3-docker-host/collect-20261123T112333Z.txt),
 [master](monitoring/c3-k8s-master/collect-20261123T112333Z.txt), [worker-1](monitoring/c3-k8s-worker-1/collect-20261123T112333Z.txt),
 [worker-2](monitoring/c3-k8s-worker-2/collect-20261123T112333Z.txt). The snapshots also record I/O pressure (PSI).
 
@@ -523,6 +546,18 @@ make helm-uninstall   # removes the release, the namespace and the PV (the data 
 
 URL: http://192.168.160.17:30081 (also .33 and .98). `verify.sh`: 39 of 39 on all three node IPs.
 Evidence: [monitoring/bonus-evidence.txt](monitoring/bonus-evidence.txt). The main URL stays NodePort 30080.
+
+![Helm release objects](monitoring/screenshots/c3-k8s-master-helm-objects.png)
+*`kubectl -n qt-spring-app-helm get pods,svc,pvc -o wide` on the master: every pod Running, the gateway on NodePort 30081, and the claim bound to `projecthub-helm-mongo-data` (MongoDB on worker-2).*
+
+![Helm copy login](monitoring/screenshots/app-helm-login.png)
+*http://192.168.160.17:30081/login: the Helm copy's login page, signing in as the member account.*
+
+![Helm copy dashboard](monitoring/screenshots/app-helm-dashboard.png)
+*The Helm copy after login as a member: the dashboard lists only the tasks assigned to that user.*
+
+![Helm copy projects](monitoring/screenshots/app-helm-projects.png)
+*The Helm copy, Projects page for the member: only the one project the member belongs to is listed.*
 
 During the install, etcd stalled for up to 6.4 s and the scheduler and controller-manager restarted once each. This
 is the host limitation described above. Both recovered within a minute, and both deployments kept passing every check.
