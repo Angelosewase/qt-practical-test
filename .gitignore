@@ -12,8 +12,6 @@ secrets.env
 !.env.example
 *.pem
 kubeconfig*
-# Nested clone of the source repo (has its own .git; app/ holds the copy)
-mydiary/
 # Editor / OS
 .DS_Store
 *.swp
