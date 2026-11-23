@@ -1,0 +1,55 @@
+---
+# metrics-server provides `kubectl top`. The manifest is vendored (metrics-server v0.9.1, unmodified).
+# kubeadm kubelets serve self-signed certificates, so the patch adds --kubelet-insecure-tls to the container args.
+- name: Create the addons directory
+  ansible.builtin.file:
+    path: /etc/kubernetes/addons
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Install the pinned metrics-server manifest (vendored in ansible/files)
+  ansible.builtin.copy:
+    src: metrics-server-v0.9.1.yaml
+    dest: /etc/kubernetes/addons/metrics-server.yaml
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+
+- name: Patch metrics-server for the kubeadm self-signed kubelet certificates
+  ansible.builtin.lineinfile:
+    path: /etc/kubernetes/addons/metrics-server.yaml
+    insertafter: "^        - --metric-resolution=15s$"
+    line: "        - --kubelet-insecure-tls"
+    state: present
+  become: true
+  register: k8s_metrics_patch
+
+- name: Apply metrics-server
+  ansible.builtin.command: kubectl apply -f /etc/kubernetes/addons/metrics-server.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  register: k8s_metrics_apply
+  changed_when: "'created' in k8s_metrics_apply.stdout or 'configured' in k8s_metrics_apply.stdout"
+
+- name: Wait until metrics-server is available
+  ansible.builtin.command: kubectl -n kube-system rollout status deploy/metrics-server --timeout=240s
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  changed_when: false
+
+- name: Wait until kubectl top returns node metrics
+  ansible.builtin.command: kubectl top nodes --no-headers
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  register: k8s_metrics_top
+  until: k8s_metrics_top.rc == 0 and (k8s_metrics_top.stdout_lines | length) >= 3
+  retries: 20
+  delay: 10
+  changed_when: false

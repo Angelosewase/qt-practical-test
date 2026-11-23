@@ -13,7 +13,7 @@ TF_ENV = $(LOAD_SECRETS); \
 	export TF_VAR_ssh_public_key="$$(cat $(CURDIR)/.private/ssh/id_ed25519.pub)"
 
 # Ansible targets are listed after the Kubernetes ones.
-.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify
+.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify collect-monitoring
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -125,3 +125,6 @@ ansible-deps: ## Install the pinned Ansible collections
 
 ansible-run: ## Run the full playbook. Sources .private/secrets.env so VM_PASSWORD reaches the VMs (no_log)
 	cd ansible && set -a && . $(CURDIR)/.private/secrets.env && set +a && ansible-playbook site.yml
+
+collect-monitoring: ## Collect resource and health snapshots from all 4 VMs into monitoring/<host>/ (read-only)
+	scripts/collect-monitoring.sh

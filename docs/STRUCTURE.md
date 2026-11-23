@@ -19,12 +19,13 @@ qt-practical-test/
 │   ├── inventory.ini      GENERATED from terraform output (gitignored: real IPs)
 │   ├── .ansible-lint      Lint config (excludes the vendored manifest in files/)
 │   ├── requirements.yml   Pinned collections (ansible.posix, community.general)
-│   ├── files/             Vendored kube-flannel v0.28.11 manifest (byte-identical to upstream)
+│   ├── files/             Vendored manifests: kube-flannel v0.28.11, metrics-server v0.9.1 (byte-identical to upstream)
 │   ├── group_vars/all.yml Kubernetes version pins and pod CIDR
 │   ├── site.yml           Entry point
 │   └── roles/             vm_access (devops password, SSH), common, kubernetes_prereqs,
 │                          containerd, kubernetes_packages, k8s_control_plane, k8s_worker, k8s_verify,
-│                          docker_host (Docker CE), compose_app (copies docker/ to the VM, runs compose)
+│                          docker_host (Docker CE), compose_app (copies docker/ to the VM, runs compose),
+│                          k8s_node_labels (MongoDB node label), k8s_metrics (metrics-server)
 ├── docker/                Task 2: Dockerfiles, nginx configs, docker-compose.yml, .env.example
 │   ├── api.Dockerfile     Go build, Alpine runtime, uid 10001
 │   ├── frontend.Dockerfile   Node build, unprivileged nginx runtime, uid 101
@@ -44,7 +45,11 @@ qt-practical-test/
 ├── app/                   ProjectHub source (the code behind the brief's "MyDiary"), copied without .git
 │   ├── backend/           Go 1.23 API (Gin, MongoDB, Valkey cache)
 │   └── frontend/          React 18 + Vite SPA
-├── monitoring/            Evidence: task1, task2, task3, task4 and resilience-evidence.txt; screenshots (Task 5)
+├── monitoring/            Evidence and screenshots (Task 5)
+│   ├── SCREENSHOTS.md     Checklist of the 37 captures, filenames and commands
+│   ├── final-verify.txt   verify.sh on both URLs
+│   ├── resilience-evidence.txt, task1..4-evidence.txt
+│   └── <host>/collect-*.txt   Timestamped snapshots per VM (from make collect-monitoring)
 ├── scripts/
 │   ├── pre-commit         Git hook: blocks commits that contain a secret value
 │   ├── secret-scan.sh     Scans staged changes, the working tree, or git history
@@ -52,6 +57,8 @@ qt-practical-test/
 │   ├── gen-inventory.sh   Writes ansible/inventory.ini from terraform output
 │   ├── verify.sh          End-to-end functional checks against any base URL
 │   ├── resilience-demo.sh Timestamped Kubernetes resilience sequence (re-runnable live)
+│   ├── collect.sh         Read-only resource and health snapshot, runs on each VM
+│   └── collect-monitoring.sh  Runs collect.sh on all 4 VMs, saves monitoring/<host>/
 │   ├── k8s-render.sh      Fills image names and tags into k8s/ (stdout)
 │   ├── k8s-secrets.sh     Creates app-secrets from docker/.env (values never printed)
 │   ├── k8s-validate.sh    Render, policy, parity, schema, cluster dry-run

@@ -335,3 +335,23 @@ Valkey caches only what MongoDB can rebuild, with TTLs of one to two minutes. Pe
 ## D-RES-2. Measured request gap in the loop
 
 The loop sleeps 0.2 s after each request. Each request takes a few tens of milliseconds, so the measured average gap is about 0.26 s. That is reported as measured, not as exactly 0.2 s.
+
+## D-MON-1. metrics-server v0.9.1, vendored, with --kubelet-insecure-tls
+
+`kubectl top` needs metrics-server. Installed by the role `k8s_metrics`, pinned to v0.9.1, the current release (checked against the GitHub API). The manifest is vendored unmodified in `ansible/files/metrics-server-v0.9.1.yaml`, and the patch is applied by `lineinfile` on the copy in `/etc/kubernetes/addons/`. The patch adds `--kubelet-insecure-tls` because kubeadm kubelets serve self-signed certificates. Tradeoff: the kubelet's certificate is not verified for metrics scraping. A production cluster would issue kubelet serving certificates and approve their CSRs. For a single-tenant exam cluster on a private network, the risk is accepted and recorded here. The role waits until `kubectl top nodes` returns three rows.
+
+## D-MON-2. Collection is read-only and runs from the laptop
+
+`scripts/collect.sh` runs on each VM. The laptop-side script `scripts/collect-monitoring.sh` copies it to `/tmp`, runs it, and deletes it. It changes nothing on the VM. The tool reads the hostname from the VM and stops if it does not match the Terraform name, so output cannot be saved under the wrong host. Commands get `</dev/null` so no command can consume the script's input. Every section has a UTC timestamp and the host name, and each tool runs only on the VMs that have it.
+
+## D-MON-3. Valkey statistics come from inside the container
+
+Cache memory, hits and misses, and key counts are read with the container's own `valkey-cli`. The password comes from the container environment (`REDISCLI_AUTH`), so it never appears on a command line or in the saved output. The saved output has no secret values (checked).
+
+## D-MON-4. Screenshots are taken by hand
+
+The brief requires screenshots of the real VMs, the real browser and the real master, so they cannot be generated. `monitoring/SCREENSHOTS.md` lists all 37 captures with their filenames, the VM, and copy-paste commands. The README already embeds them, so they render when added.
+
+## D-MON-5. Final verification and IP check
+
+`scripts/verify.sh` ran against both URLs (34 of 34 each), saved in `monitoring/final-verify.txt`. For IPs, `make tf-output` reads only the Terraform state, so it cannot show a DHCP change by itself. The check that matters is the address each VM reports for itself. Those match the state exactly (table in WORKLOG), so no IP has changed. `make tf-apply` was not run.

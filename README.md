@@ -19,7 +19,7 @@ Docker Compose on one VM, and Kubernetes on a three-node kubeadm cluster.
 | Task 2: Docker images and Compose (`docker/`) | **Deployed on c3-docker-host** (http://192.168.160.11). Images pushed to Docker Hub as `angelsewase/projecthub-api:1.0.0` and `angelsewase/projecthub-frontend:1.0.0`. 34 of 34 functional checks pass on the VM |
 | Task 3: Ansible Kubernetes cluster (`ansible/`) | Not started (needs the VMs) |
 | Task 4: Kubernetes deployment (`k8s/`) | **Deployed on the exam cluster**. NodePort http://192.168.160.17:30080 (also .33 and .98). `verify.sh` 34 of 34. Resilience proof: 174 requests, 0 failed |
-| Task 5: Monitoring (`monitoring/`) | Not started |
+| Task 5: Monitoring (`monitoring/`) | Text evidence collected from all 4 VMs (`make collect-monitoring`), metrics-server installed. Screenshots: checklist in `monitoring/SCREENSHOTS.md`, **to be taken by hand** |
 
 ## Architecture
 
@@ -277,6 +277,122 @@ persistent volume. Without it the API reads MongoDB directly and works, only slo
 - Pods not ready: `kubectl -n qt-spring-app describe pod <name>` and `kubectl -n qt-spring-app get events --sort-by=.lastTimestamp`.
 - nginx 502 or 504: check the upstream pod with `kubectl -n qt-spring-app get endpoints api`.
 
+## Monitoring
+
+Monitoring uses standard command-line tools on each VM, plus `kubectl top` (metrics-server) on the cluster. Everything
+that is text is saved with UTC timestamps; the screenshots are taken by hand from a terminal and browser, with the
+commands listed in [monitoring/SCREENSHOTS.md](monitoring/SCREENSHOTS.md).
+
+### Text output (automated, read-only)
+
+```bash
+make collect-monitoring     # runs scripts/collect.sh on all 4 VMs; saves monitoring/<host>/collect-<UTC>.txt
+```
+
+What each file holds:
+
+| Host | Sections |
+|---|---|
+| every VM | `top` (batch, one iteration), `ps` by CPU and memory, `df -h`, `free -h`, `vmstat 1 3` (virtual memory and disk I/O), `uptime` (load 1, 5, 15 min), `ss -tulpn`, addresses |
+| c3-docker-host | `docker ps`, `docker stats --no-stream`, compose service health, API log (last 50 lines), Valkey memory, hits and misses, cached keys, health through NGINX |
+| c3-k8s-master | `kubectl get nodes -o wide`, `kubectl get pods -A -o wide`, `kubectl top nodes`, `kubectl top pods -A`, app services and pods, health through the NodePort |
+
+Other text evidence: [monitoring/final-verify.txt](monitoring/final-verify.txt) (verify.sh on both URLs),
+[monitoring/resilience-evidence.txt](monitoring/resilience-evidence.txt) (resilience proof),
+[monitoring/task1-evidence.txt](monitoring/task1-evidence.txt), [monitoring/task2-evidence.txt](monitoring/task2-evidence.txt),
+[monitoring/task3-evidence.txt](monitoring/task3-evidence.txt), and [monitoring/task4-evidence.txt](monitoring/task4-evidence.txt).
+
+### metrics-server
+
+`kubectl top` needs metrics-server. It is installed by the Ansible role `k8s_metrics`: pinned to **v0.9.1** and vendored in
+`ansible/files/metrics-server-v0.9.1.yaml`. kubeadm kubelets serve self-signed certificates, so the role adds
+`--kubelet-insecure-tls` (idempotent `lineinfile`). The role waits until `kubectl top nodes` returns data for all three nodes.
+
+### Health and logs
+
+- Health: `GET /api/health` returns 200 with `{"status":"ok","database":"up","cache":"up|down"}` (503 when MongoDB is down).
+  It is wired into the compose healthcheck, the Kubernetes readiness and liveness probes, and the functional test.
+- Logs: on the docker host, `cd /opt/projecthub/docker && docker compose logs --tail=50 api`. On the cluster,
+  `kubectl -n qt-spring-app logs deploy/api --tail=50`.
+- Resources: every container has CPU and memory requests and limits (the Kubernetes policy check enforces this). Show
+  them with `kubectl -n qt-spring-app describe pod <name>` or `kubectl top pods -n qt-spring-app`.
+
+### Screenshots
+
+Each image is referenced by its filename and embedded with a relative path. They render once you add them to `monitoring/`.
+
+#### Per VM: top, df -h, free -h, uptime, ss -tulpn
+
+**c3-docker-host** (192.168.160.11)
+
+![c3-docker-host top](monitoring/c3-docker-host-top.png)
+![c3-docker-host df](monitoring/c3-docker-host-df.png)
+![c3-docker-host free](monitoring/c3-docker-host-free.png)
+![c3-docker-host uptime](monitoring/c3-docker-host-uptime.png)
+![c3-docker-host ss](monitoring/c3-docker-host-ss.png)
+
+
+**c3-k8s-master** (192.168.160.17)
+
+![c3-k8s-master top](monitoring/c3-k8s-master-top.png)
+![c3-k8s-master df](monitoring/c3-k8s-master-df.png)
+![c3-k8s-master free](monitoring/c3-k8s-master-free.png)
+![c3-k8s-master uptime](monitoring/c3-k8s-master-uptime.png)
+![c3-k8s-master ss](monitoring/c3-k8s-master-ss.png)
+
+
+**c3-k8s-worker-1** (192.168.160.33)
+
+![c3-k8s-worker-1 top](monitoring/c3-k8s-worker-1-top.png)
+![c3-k8s-worker-1 df](monitoring/c3-k8s-worker-1-df.png)
+![c3-k8s-worker-1 free](monitoring/c3-k8s-worker-1-free.png)
+![c3-k8s-worker-1 uptime](monitoring/c3-k8s-worker-1-uptime.png)
+![c3-k8s-worker-1 ss](monitoring/c3-k8s-worker-1-ss.png)
+
+
+**c3-k8s-worker-2** (192.168.160.98)
+
+![c3-k8s-worker-2 top](monitoring/c3-k8s-worker-2-top.png)
+![c3-k8s-worker-2 df](monitoring/c3-k8s-worker-2-df.png)
+![c3-k8s-worker-2 free](monitoring/c3-k8s-worker-2-free.png)
+![c3-k8s-worker-2 uptime](monitoring/c3-k8s-worker-2-uptime.png)
+![c3-k8s-worker-2 ss](monitoring/c3-k8s-worker-2-ss.png)
+
+#### Docker host: containers, logs, cache, health
+
+![docker ps](monitoring/c3-docker-host-docker-ps.png)
+![docker stats](monitoring/c3-docker-host-docker-stats.png)
+![API log, last 50 lines](monitoring/c3-docker-host-api-logs.png)
+![Valkey cache: memory, hits and misses, cached keys](monitoring/c3-docker-host-valkey-cache.png)
+![health through NGINX](monitoring/c3-docker-host-health.png)
+
+#### Control plane: nodes, pods, metrics, health
+
+![kubectl get nodes](monitoring/c3-k8s-master-kubectl-get-nodes.png)
+![kubectl get pods -A](monitoring/c3-k8s-master-kubectl-get-pods-A.png)
+![kubectl top nodes](monitoring/c3-k8s-master-kubectl-top-nodes.png)
+![health through the NodePort](monitoring/c3-k8s-master-health.png)
+
+#### Resilience demo (run from /home/devops on the master)
+
+![resilience demo, start](monitoring/resilience-demo-start.png)
+![resilience demo, pod delete](monitoring/resilience-demo-pod-delete.png)
+![resilience demo, cache down](monitoring/resilience-demo-cache-down.png)
+![resilience demo, summary](monitoring/resilience-demo-summary.png)
+
+#### The application in a browser
+
+Docker Compose, http://192.168.160.11:
+
+![Compose login](monitoring/app-compose-login.png)
+![Compose project list](monitoring/app-compose-project.png)
+
+Kubernetes NodePort, http://192.168.160.17:30080:
+
+![Kubernetes login](monitoring/app-k8s-login.png)
+![Kubernetes project list](monitoring/app-k8s-project.png)
+
+
 ## Repository layout
 
 See [docs/STRUCTURE.md](docs/STRUCTURE.md) for the full tree. Decisions are in [docs/DECISIONS.md](docs/DECISIONS.md),
@@ -284,8 +400,6 @@ the running log is in [docs/WORKLOG.md](docs/WORKLOG.md), and operations steps a
 
 ## Still to do before submission
 
-- Apply Task 1 (needs the Proxmox permission fix) and fill the VM table above.
-- Ansible cluster setup (Task 3), then the cluster-wide deploy and resilience proof (Task 4).
-- Push both images to Docker Hub with real credentials (Task 2).
-- Monitoring evidence and screenshots (Task 5), and the bonus items if time allows.
-- Credential placeholders above: VM password, SSH key, Docker Hub user.
+- Take the screenshots listed in [monitoring/SCREENSHOTS.md](monitoring/SCREENSHOTS.md) (37 images, filenames fixed). The README already embeds them.
+- Fill in the credential placeholders: the VM password (kept in `.private/secrets.env`, not in this file), the SSH key or key path you want examiners to use, and the Docker Hub account (`angelsewase`, already set).
+- Commit `monitoring/` after the screenshots are added, and push the repository to the exam Git server.
