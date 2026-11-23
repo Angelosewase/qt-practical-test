@@ -4,7 +4,7 @@
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 ENV_FILE="$ROOT/docker/.env"
-NS=qt-spring-app
+NS="${K8S_NAMESPACE:-qt-spring-app}"   # make helm-deploy sets qt-spring-app-helm
 KUBECTL="${KUBECTL:-kubectl}"
 
 [[ -f "$ENV_FILE" ]] || { echo "k8s-secrets: docker/.env missing (run: make env)" >&2; exit 1; }

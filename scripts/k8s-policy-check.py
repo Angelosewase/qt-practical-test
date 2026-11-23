@@ -5,8 +5,14 @@ Rules: every container has CPU and memory requests and limits; no image uses the
 the API and frontend have liveness and readiness probes; the namespace is qt-spring-app; exactly one
 NodePort service exposes port 30080; nothing runs with a privileged container.
 """
+import os
 import sys
 import yaml
+
+# Defaults are the plain deployment. The Helm release in qt-spring-app-helm overrides them (make helm-lint).
+NAMESPACE = os.environ.get("POLICY_NAMESPACE", "qt-spring-app")
+NODE_PORT = int(os.environ.get("POLICY_NODEPORT", "30080"))
+REQUIRE_NAMESPACE_OBJECT = os.environ.get("POLICY_REQUIRE_NAMESPACE", "1") == "1"
 
 problems = []
 docs = [d for d in yaml.safe_load_all(sys.stdin) if d]
@@ -37,15 +43,15 @@ for d in docs:
                 for probe in ("readinessProbe", "livenessProbe"):
                     if probe not in c:
                         problems.append(f'{label(d)}/{c["name"]}: missing {probe}')
-    if "namespace" in d.get("metadata", {}) and d["metadata"]["namespace"] != "qt-spring-app":
-        problems.append(f'{label(d)}: namespace is {d["metadata"]["namespace"]}, expected qt-spring-app')
+    if "namespace" in d.get("metadata", {}) and d["metadata"]["namespace"] != NAMESPACE:
+        problems.append(f'{label(d)}: namespace is {d["metadata"]["namespace"]}, expected {NAMESPACE}')
 
 node_ports = [p for s in kinds.get("Service", []) if s["spec"].get("type") == "NodePort"
-              for p in s["spec"]["ports"] if p.get("nodePort") == 30080]
+              for p in s["spec"]["ports"] if p.get("nodePort") == NODE_PORT]
 if len(node_ports) != 1:
-    problems.append(f"expected exactly one NodePort service on 30080, found {len(node_ports)}")
+    problems.append(f"expected exactly one NodePort service on {NODE_PORT}, found {len(node_ports)}")
 
-for name in ("Namespace", "Deployment", "StatefulSet", "Service", "ConfigMap", "PersistentVolume", "PersistentVolumeClaim"):
+for name in (("Namespace",) if REQUIRE_NAMESPACE_OBJECT else ()) + ("Deployment", "StatefulSet", "Service", "ConfigMap", "PersistentVolume", "PersistentVolumeClaim"):
     if name not in kinds:
         problems.append(f"no {name} in the rendered manifests")
 

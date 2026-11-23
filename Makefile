@@ -13,7 +13,7 @@ TF_ENV = $(LOAD_SECRETS); \
 	export TF_VAR_ssh_public_key="$$(cat $(CURDIR)/.private/ssh/id_ed25519.pub)"
 
 # Ansible targets are listed after the Kubernetes ones.
-.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify collect-monitoring grading-checks ansible
+.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify helm-lint helm-deploy helm-uninstall collect-monitoring grading-checks ansible
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -105,6 +105,33 @@ k8s-status: ## Pods, services and volume claims in the app namespace
 
 k8s-verify: ## Functional checks against the NodePort (K8S_URL overrides; default http://<node>:30080)
 	scripts/verify.sh $${K8S_URL:-http://127.0.0.1:30080}
+
+# Bonus: the same stack as a Helm chart, installed as a second copy next to the plain manifests.
+HELM_CHART = k8s/helm/projecthub
+HELM_NS = qt-spring-app-helm
+HELM_VALUES = k8s/helm/values-qt-spring-app-helm.yaml
+HELM_OUT = $(CURDIR)/.tmp/helm
+
+helm-lint: ## Helm: lint, render, policy, kubeconform, and parity with k8s/ (no cluster needed)
+	mkdir -p $(HELM_OUT)
+	helm lint $(HELM_CHART)
+	helm lint $(HELM_CHART) -f $(HELM_VALUES) --namespace $(HELM_NS)
+	helm template projecthub $(HELM_CHART) --namespace $(HELM_NS) -f $(HELM_VALUES) > $(HELM_OUT)/helm-ns.yaml
+	POLICY_NAMESPACE=$(HELM_NS) POLICY_NODEPORT=30081 POLICY_REQUIRE_NAMESPACE=0 python3 scripts/k8s-policy-check.py < $(HELM_OUT)/helm-ns.yaml
+	kubeconform -strict -summary -kubernetes-version 1.32.5 $(HELM_OUT)/helm-ns.yaml
+	scripts/k8s-render.sh > $(HELM_OUT)/plain.yaml
+	helm template projecthub $(HELM_CHART) --namespace qt-spring-app > $(HELM_OUT)/chart-default.yaml
+	python3 scripts/helm-parity.py $(HELM_OUT)/plain.yaml $(HELM_OUT)/chart-default.yaml
+
+helm-deploy: ## Helm: Secret from docker/.env, then install or upgrade the chart in qt-spring-app-helm (NodePort 30081)
+	$(KUBE) K8S_NAMESPACE=$(HELM_NS) scripts/k8s-secrets.sh
+	$(KUBE) helm upgrade --install projecthub $(HELM_CHART) --namespace $(HELM_NS) -f $(HELM_VALUES) --wait --timeout 10m
+	$(KUBE) kubectl -n $(HELM_NS) get pods,svc,pvc -o wide
+
+helm-uninstall: ## Helm: remove the release, its namespace and its PV (the data directory stays on the worker)
+	-$(KUBE) helm uninstall projecthub --namespace $(HELM_NS) --wait
+	$(KUBE) kubectl delete namespace $(HELM_NS) --ignore-not-found --wait=true
+	$(KUBE) kubectl delete pv projecthub-helm-mongo-data --ignore-not-found
 
 ANSIBLE_DIR = $(CURDIR)/ansible
 

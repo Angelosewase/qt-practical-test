@@ -1,0 +1,18 @@
+# Overrides for the second, Helm-managed copy in namespace qt-spring-app-helm (make helm-deploy).
+# It runs next to the plain-manifest deployment, so the NodePort, the PV and its host path must differ.
+gateway:
+  nodePort: 30081
+
+corsOrigins:
+  - http://192.168.160.17:30081
+  - http://192.168.160.33:30081
+  - http://192.168.160.98:30081
+
+mongodb:
+  persistence:
+    pvName: projecthub-helm-mongo-data
+    storageClassName: projecthub-helm-local
+    hostPath: /srv/projecthub-helm/mongo
+    # Pinned by hostname to worker-2; the plain deployment's volume is on worker-1.
+    nodeSelectorKey: kubernetes.io/hostname
+    nodeSelectorValue: c3-k8s-worker-2

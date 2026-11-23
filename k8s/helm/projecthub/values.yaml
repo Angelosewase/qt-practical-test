@@ -1,0 +1,74 @@
+# Defaults render the same objects as the plain manifests in k8s/ (checked by scripts/helm-parity.py).
+# No secret values here: the chart reads the Secret named in existingSecret, which `make helm-deploy`
+# creates from docker/.env at deploy time (scripts/k8s-secrets.sh).
+existingSecret: app-secrets
+
+images:
+  api: {repository: angelsewase/projecthub-api, tag: "1.0.0"}
+  frontend: {repository: angelsewase/projecthub-frontend, tag: "1.0.0"}
+  gateway: {repository: nginx, tag: 1.27.5-alpine}
+  mongodb: {repository: mongo, tag: "7.0.14"}
+  valkey: {repository: valkey/valkey, tag: 8.1.12-alpine}
+  waitForMongodb: {repository: alpine, tag: "3.21.10"}
+
+replicas:
+  api: 2
+  frontend: 2
+  gateway: 2
+
+resources:
+  api:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: "1", memory: 512Mi}
+  apiWaitForMongodb:
+    requests: {cpu: 10m, memory: 16Mi}
+    limits: {cpu: 100m, memory: 32Mi}
+  frontend:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 200m, memory: 128Mi}
+  gateway:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 200m, memory: 128Mi}
+  mongodb:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  mongodbFixDataDir:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {cpu: 100m, memory: 64Mi}
+  valkey:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 500m, memory: 256Mi}
+
+# Soft heap limit for the Go API, kept below resources.api.limits.memory (D-K8S-20).
+api:
+  goMemLimit: 400MiB
+
+gateway:
+  nodePort: 30080
+
+# Browser origins allowed to call the API (exact scheme, host and port). See D-CORS-1.
+corsOrigins:
+  - http://192.168.160.11
+  - http://192.168.160.17:30080
+  - http://192.168.160.33:30080
+  - http://192.168.160.98:30080
+
+config:
+  mongoDb: projecthub
+  mongoConnectTimeout: 60s
+  jwtExpiresIn: 24h
+  seedEnabled: "true"
+  cacheEnabled: "true"
+  cacheStatsTtl: 2m
+  cacheUserTtl: 1m
+
+# The PersistentVolume is cluster-scoped, so a second release needs its own name and host path.
+mongodb:
+  persistence:
+    pvName: projecthub-mongo-data
+    storageClassName: projecthub-local
+    size: 10Gi
+    hostPath: /srv/projecthub/mongo
+    # The PV is pinned to the node(s) carrying this label.
+    nodeSelectorKey: projecthub/storage
+    nodeSelectorValue: mongo

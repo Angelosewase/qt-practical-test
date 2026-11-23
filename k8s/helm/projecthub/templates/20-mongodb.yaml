@@ -1,0 +1,125 @@
+{{- $p := .Values.mongodb.persistence }}
+# MongoDB: one replica on a local PersistentVolume pinned to the node selected in values (mongodb.persistence).
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ $p.pvName }}
+  labels:
+    {{- include "projecthub.labels" (dict "root" . "name" "mongodb") | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ $p.size }}
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ $p.storageClassName }}
+  hostPath:
+    path: {{ $p.hostPath }}
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: {{ $p.nodeSelectorKey }}
+              operator: In
+              values: [{{ $p.nodeSelectorValue | quote }}]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "projecthub.labels" (dict "root" . "name" "mongodb") | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: {{ $p.storageClassName }}
+  volumeName: {{ $p.pvName }}
+  resources:
+    requests:
+      storage: {{ $p.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "projecthub.labels" (dict "root" . "name" "mongodb") | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: mongodb
+  ports:
+    - name: mongo
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "projecthub.labels" (dict "root" . "name" "mongodb") | nindent 4 }}
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mongodb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mongodb
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      initContainers:
+        # hostPath directories are created root-owned; mongod runs as uid 999.
+        - name: fix-data-dir
+          image: {{ include "projecthub.image" .Values.images.mongodb }}
+          command: ["sh", "-c", "chown -R 999:999 /data/db"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          resources:
+            {{- toYaml .Values.resources.mongodbFixDataDir | nindent 12 }}
+      containers:
+        - name: mongodb
+          image: {{ include "projecthub.image" .Values.images.mongodb }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: mongo
+              containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef: {name: {{ .Values.existingSecret }}, key: MONGO_ROOT_USER}
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: {{ .Values.existingSecret }}, key: MONGO_ROOT_PASSWORD}
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          readinessProbe:
+            exec:
+              command: ["mongosh", "--quiet", "--norc", "--eval", "db.adminCommand({ping: 1}).ok"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["mongosh", "--quiet", "--norc", "--eval", "db.adminCommand({ping: 1}).ok"]
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.resources.mongodb | nindent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mongo-data

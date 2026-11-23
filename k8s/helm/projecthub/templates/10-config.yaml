@@ -1,0 +1,67 @@
+# Non-secret configuration. Secrets come from the existing Secret {{ .Values.existingSecret }} (created at deploy time).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "projecthub.labels" (dict "root" . "name" "api") | nindent 4 }}
+data:
+  PORT: "8080"
+  GIN_MODE: release
+  MONGO_HOST: mongodb:27017
+  MONGO_DB: {{ .Values.config.mongoDb }}
+  MONGO_CONNECT_TIMEOUT: {{ .Values.config.mongoConnectTimeout }}
+  JWT_EXPIRES_IN: {{ .Values.config.jwtExpiresIn }}
+  SEED_ENABLED: {{ .Values.config.seedEnabled | quote }}
+  CACHE_ENABLED: {{ .Values.config.cacheEnabled | quote }}
+  CORS_ORIGINS: {{ join "," .Values.corsOrigins | quote }}
+  VALKEY_ADDR: valkey:6379
+  VALKEY_DB: "0"
+  CACHE_STATS_TTL: {{ .Values.config.cacheStatsTtl }}
+  CACHE_USER_TTL: {{ .Values.config.cacheUserTtl }}
+---
+# Same routing as docker/nginx.conf; upstreams are fully qualified with the release namespace.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-nginx
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "projecthub.labels" (dict "root" . "name" "gateway") | nindent 4 }}
+data:
+  default.conf: |
+    resolver kube-dns.kube-system.svc.cluster.local valid=10s ipv6=off;
+
+    server {
+        listen 80;
+        server_name _;
+        server_tokens off;
+        client_max_body_size 1m;
+
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
+        proxy_send_timeout 30s;
+
+        location /api/ {
+            set $api_upstream http://api.{{ .Release.Namespace }}.svc.cluster.local:8080;
+            proxy_pass $api_upstream;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location / {
+            set $frontend_upstream http://frontend.{{ .Release.Namespace }}.svc.cluster.local:8080;
+            proxy_pass $frontend_upstream;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }

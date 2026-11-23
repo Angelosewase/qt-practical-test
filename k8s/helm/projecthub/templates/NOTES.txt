@@ -1,0 +1,3 @@
+ProjectHub is installed in namespace {{ .Release.Namespace }}.
+Open http://<any-node-ip>:{{ .Values.gateway.nodePort }}  (health: /api/health)
+The Secret {{ .Values.existingSecret }} must exist in this namespace; `make helm-deploy` creates it from docker/.env.

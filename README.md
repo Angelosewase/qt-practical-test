@@ -63,14 +63,15 @@ The full requirement-by-requirement table, with the file and the evidence for ea
 | Task 5: Monitoring | 10% | `monitoring/` | done, except two screenshot types (`ps` and `vmstat`); those exist as text only |
 | Documentation and structure | 10% | this README, `docs/` | done |
 | Application functionality | 5% | `scripts/verify.sh` | done, except search: the app has no search feature |
-| Bonus: Helm, Gateway API | +10 | see [Bonus](#bonus) | see that section |
+| Bonus: Helm | +5 | `k8s/helm/`, see [Bonus](#bonus) | done (second copy on NodePort 30081) |
+| Bonus: Gateway API | +5 | see [Bonus](#bonus) | not attempted (the control plane is not stable enough) |
 
 ## Repository layout
 
 - [`iac/`](iac/): Task 1. Terraform for the four VMs (`provider.tf`, `variables.tf`, `main.tf`, `outputs.tf`).
 - [`ansible/`](ansible/): Task 3, and the Compose deployment of Task 2. `site.yml`, the roles, the pinned Flannel and metrics-server manifests in `files/`, and an inventory template.
 - [`docker/`](docker/): Task 2. The two Dockerfiles, the nginx configs, `docker-compose.yml` and `.env.example`.
-- [`k8s/`](k8s/): Task 4. The manifests, numbered in apply order, plus `secret.example.yaml` (a template only).
+- [`k8s/`](k8s/): Task 4. The manifests, numbered in apply order, plus `secret.example.yaml` (a template only). `k8s/helm/` holds the Helm chart (bonus).
 - [`app/`](app/): the application source (`backend/` Go, `frontend/` React), copied from the exam GitLab without its `.git`.
 - [`monitoring/`](monitoring/): Task 5 screenshots in `screenshots/`, per-VM text snapshots in `<vm>/`, and the evidence files listed in each task section.
 - [`scripts/`](scripts/): helpers called by the Makefile (functional test, resilience demo, collectors, render and validate, secret scan).
@@ -500,7 +501,38 @@ snapshot of each VM: [docker host](monitoring/c3-docker-host/collect-20261123T11
 
 ## Bonus
 
-Not attempted yet.
+### Helm chart (done)
+
+[k8s/helm/projecthub/](k8s/helm/projecthub/) packages the same stack. Its default values render **the same 14 objects
+as `k8s/`**: `scripts/helm-parity.py` compares them field by field and ignores only labels and the config-hash
+annotation. [values.yaml](k8s/helm/projecthub/values.yaml) holds the images and tags, the replica counts, the requests and limits of every container,
+the NodePort, the CORS origins and the PersistentVolume placement. The chart contains **no secret and no Secret
+template**: it reads the existing Secret `app-secrets`, which `make helm-deploy` creates from `docker/.env` just
+before the install (the same `scripts/k8s-secrets.sh` as Task 4).
+
+The release runs as a second copy next to the plain deployment, with
+[k8s/helm/values-qt-spring-app-helm.yaml](k8s/helm/values-qt-spring-app-helm.yaml): namespace `qt-spring-app-helm`, NodePort **30081**,
+and its own PersistentVolume `projecthub-helm-mongo-data` pinned by hostname to `c3-k8s-worker-2`.
+
+```bash
+make helm-lint        # helm lint, helm template, policy check, kubeconform strict, parity with k8s/
+make helm-deploy      # Secret from docker/.env, then helm upgrade --install --wait
+make k8s-verify K8S_URL=http://192.168.160.17:30081
+make helm-uninstall   # removes the release, the namespace and the PV (the data directory stays on worker-2)
+```
+
+URL: http://192.168.160.17:30081 (also .33 and .98). `verify.sh`: 39 of 39 on all three node IPs.
+Evidence: [monitoring/bonus-evidence.txt](monitoring/bonus-evidence.txt). The main URL stays NodePort 30080.
+
+During the install, etcd stalled for up to 6.4 s and the scheduler and controller-manager restarted once each. This
+is the host limitation described above. Both recovered within a minute, and both deployments kept passing every check.
+
+### Gateway API (not attempted)
+
+This bonus was to be attempted only if the Helm install left the cluster calm. It did not: a short burst of API writes
+was enough to restart two control-plane components. A Gateway API controller and its CRDs add more writes to the
+same etcd, so this bonus was skipped to keep the required deployments safe. The reasoning is in
+[docs/DECISIONS.md](docs/DECISIONS.md) D-GW-1.
 
 ## Troubleshooting
 

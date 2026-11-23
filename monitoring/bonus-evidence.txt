@@ -1,0 +1,137 @@
+# Bonus evidence (generated 2026-11-23T13:28:18Z). No secret values: the Secret is listed by name only.
+
+## 1. Helm (+5): make helm-lint (lint, render, policy, kubeconform, parity with k8s/)
+==> Linting k8s/helm/projecthub
+
+1 chart(s) linted, 0 chart(s) failed
+==> Linting k8s/helm/projecthub
+
+1 chart(s) linted, 0 chart(s) failed
+policy: OK (14 objects, 14 checked)
+Summary: 14 resources found in 1 file - Valid: 14, Invalid: 0, Errors: 0, Skipped: 0
+helm parity: OK (14 objects identical apart from labels and the config hash)
+
+## 2. Install: make helm-deploy (Secret from docker/.env, then helm upgrade --install --wait)
+started 2026-11-23T13:25:48Z, finished 2026-11-23T13:27:27Z
+k8s-secrets: app-secrets applied to namespace qt-spring-app-helm (values not shown)
+Release "projecthub" does not exist. Installing it now.
+NAME: projecthub
+LAST DEPLOYED: Mon Nov 23 15:25:50 2026
+NAMESPACE: qt-spring-app-helm
+STATUS: deployed
+REVISION: 1
+
+## 3. Release and objects
+NAME      	NAMESPACE         	REVISION	UPDATED                               	STATUS  	CHART           	APP VERSION
+projecthub	qt-spring-app-helm	1       	2026-11-23 15:25:50.39332881 +0200 CAT	deployed	projecthub-1.0.0	1.0.0      
+
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS   IMAGES                                  SELECTOR
+deployment.apps/api        2/2     2            2           2m29s   api          angelsewase/projecthub-api:1.0.0        app.kubernetes.io/name=api
+deployment.apps/frontend   2/2     2            2           2m29s   frontend     angelsewase/projecthub-frontend:1.0.0   app.kubernetes.io/name=frontend
+deployment.apps/gateway    2/2     2            2           2m29s   nginx        nginx:1.27.5-alpine                     app.kubernetes.io/name=gateway
+deployment.apps/valkey     1/1     1            1           2m29s   valkey       valkey/valkey:8.1.12-alpine             app.kubernetes.io/name=valkey
+
+NAME                       READY   AGE     CONTAINERS   IMAGES
+statefulset.apps/mongodb   1/1     2m29s   mongodb      mongo:7.0.14
+
+NAME                            READY   STATUS    RESTARTS   AGE     IP            NODE              NOMINATED NODE   READINESS GATES
+pod/api-5f446ffc48-5g2hh        1/1     Running   0          2m29s   10.244.2.11   c3-k8s-worker-1   <none>           <none>
+pod/api-5f446ffc48-wsj4l        1/1     Running   0          2m29s   10.244.1.47   c3-k8s-worker-2   <none>           <none>
+pod/frontend-867884df48-47mxc   1/1     Running   0          2m29s   10.244.1.50   c3-k8s-worker-2   <none>           <none>
+pod/frontend-867884df48-jjmmx   1/1     Running   0          2m29s   10.244.2.13   c3-k8s-worker-1   <none>           <none>
+pod/gateway-6985b7d795-v2jr4    1/1     Running   0          2m29s   10.244.2.12   c3-k8s-worker-1   <none>           <none>
+pod/gateway-6985b7d795-wql77    1/1     Running   0          2m29s   10.244.1.49   c3-k8s-worker-2   <none>           <none>
+pod/mongodb-0                   1/1     Running   0          2m29s   10.244.1.51   c3-k8s-worker-2   <none>           <none>
+pod/valkey-585589ff47-p2ktd     1/1     Running   0          2m29s   10.244.1.48   c3-k8s-worker-2   <none>           <none>
+
+NAME               TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE     SELECTOR
+service/api        ClusterIP   10.96.247.155    <none>        8080/TCP       2m30s   app.kubernetes.io/name=api
+service/frontend   ClusterIP   10.109.138.194   <none>        8080/TCP       2m30s   app.kubernetes.io/name=frontend
+service/gateway    NodePort    10.108.191.215   <none>        80:30081/TCP   2m30s   app.kubernetes.io/name=gateway
+service/mongodb    ClusterIP   10.108.203.50    <none>        27017/TCP      2m30s   app.kubernetes.io/name=mongodb
+service/valkey     ClusterIP   10.104.106.128   <none>        6379/TCP       2m30s   app.kubernetes.io/name=valkey
+
+NAME                         DATA   AGE
+configmap/api-config         13     2m30s
+configmap/gateway-nginx      1      2m30s
+configmap/kube-root-ca.crt   1      2m31s
+
+NAME                               STATUS   VOLUME                       CAPACITY   ACCESS MODES   STORAGECLASS            VOLUMEATTRIBUTESCLASS   AGE     VOLUMEMODE
+persistentvolumeclaim/mongo-data   Bound    projecthub-helm-mongo-data   10Gi       RWO            projecthub-helm-local   <unset>                 2m30s   Filesystem
+
+secret/app-secrets
+secret/sh.helm.release.v1.projecthub.v1
+
+PV                           CLAIM                PVC          PATH                         PINNED-BY                TO
+projecthub-helm-mongo-data   qt-spring-app-helm   mongo-data   /srv/projecthub-helm/mongo   kubernetes.io/hostname   c3-k8s-worker-2
+projecthub-mongo-data        qt-spring-app        mongo-data   /srv/projecthub/mongo        projecthub/storage       mongo
+
+## 4. Health through NodePort 30081 on every node, and the main NodePort 30080 unchanged
+http://192.168.160.17:30081/api/health -> {"status":"ok","database":"up","cache":"up"}
+http://192.168.160.33:30081/api/health -> {"status":"ok","database":"up","cache":"up"}
+http://192.168.160.98:30081/api/health -> {"status":"ok","database":"up","cache":"up"}
+http://192.168.160.17:30080/api/health -> {"status":"ok","database":"up","cache":"up"}
+
+## 5. scripts/verify.sh against the Helm release
+--- http://192.168.160.17:30081
+2026-11-23T13:27:37Z SUMMARY passed=39 failed=0
+--- http://192.168.160.33:30081
+2026-11-23T13:27:40Z SUMMARY passed=39 failed=0
+--- http://192.168.160.98:30081
+2026-11-23T13:27:44Z SUMMARY passed=39 failed=0
+
+Full run on http://192.168.160.17:30081:
+2026-11-23T13:27:33Z verify.sh against http://192.168.160.17:30081 (run 1795440453)
+2026-11-23T13:27:33Z PASS page home (/) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:27:34Z PASS page login (/login) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:27:34Z PASS page register (/register) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:27:34Z PASS page dashboard route (/dashboard) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:27:34Z PASS page deep SPA route (/projects/123) returns 200 text/html (HTTP 200, text/html)
+2026-11-23T13:27:34Z PASS page static script from index.html (/assets/index-qt0J1DRh.js) returns 200 application/javascript (HTTP 200, application/javascript)
+2026-11-23T13:27:34Z PASS api health returns 200 (HTTP 200)
+2026-11-23T13:27:34Z PASS api health reports database up 
+2026-11-23T13:27:34Z PASS api health reports cache state (cache=up)
+2026-11-23T13:27:34Z PASS register user A (HTTP 201)
+2026-11-23T13:27:34Z PASS register user B (HTTP 201)
+2026-11-23T13:27:35Z PASS login user A (HTTP 200)
+2026-11-23T13:27:35Z PASS login with wrong password is rejected (HTTP 401)
+2026-11-23T13:27:35Z PASS auth/me for user A (HTTP 200)
+2026-11-23T13:27:35Z PASS auth/me returns user A's email 
+2026-11-23T13:27:35Z PASS projects without a token is rejected (HTTP 401)
+2026-11-23T13:27:35Z PASS login seeded manager (HTTP 200)
+2026-11-23T13:27:35Z PASS login seeded admin (HTTP 200)
+2026-11-23T13:27:35Z PASS member cannot create a project (role rule) (HTTP 403)
+2026-11-23T13:27:35Z PASS manager creates a project (HTTP 201)
+2026-11-23T13:27:36Z PASS manager creates a task in the project (HTTP 201)
+2026-11-23T13:27:36Z PASS manager lists projects (HTTP 200)
+2026-11-23T13:27:36Z PASS project appears in manager's list 
+2026-11-23T13:27:36Z PASS manager lists tasks of the project (HTTP 200)
+2026-11-23T13:27:36Z PASS task appears in the project's list 
+2026-11-23T13:27:36Z PASS user A lists projects (HTTP 200)
+2026-11-23T13:27:36Z PASS user A does not see the manager's project 
+2026-11-23T13:27:36Z PASS user A cannot open the manager's project (404, not 403) (HTTP 404)
+2026-11-23T13:27:36Z PASS user A cannot list the project's tasks (HTTP 404)
+2026-11-23T13:27:36Z PASS user A cannot change the task (HTTP 404)
+2026-11-23T13:27:36Z PASS user B does not see the project 
+2026-11-23T13:27:36Z PASS manager adds user A to the project (HTTP 200)
+2026-11-23T13:27:36Z PASS user A now sees the shared project 
+2026-11-23T13:27:36Z PASS shared member cannot create tasks (owner or admin only) (HTTP 403)
+2026-11-23T13:27:36Z PASS user B still cannot open the project after sharing with A (HTTP 404)
+2026-11-23T13:27:37Z PASS admin sees every project (documented rule) 
+2026-11-23T13:27:37Z PASS login from an unlisted origin is refused (no wildcard) (HTTP 403)
+2026-11-23T13:27:37Z PASS manager deletes the test project (HTTP 204)
+2026-11-23T13:27:37Z PASS deleted project is gone (HTTP 404)
+2026-11-23T13:27:37Z SUMMARY passed=39 failed=0
+
+## 6. Control plane during the install (Proxmox host limitation, README 'Known limitation')
+Before the install (13:22 UTC): /readyz ok; kubectl top nodes: master 92m CPU 782Mi, worker-1 184m 524Mi, worker-2 38m 462Mi.
+During the install etcd logged 11 'slow fdatasync' warnings between 13:26:11 and 13:26:54 UTC (worst 6.4 s).
+kube-scheduler and kube-controller-manager lost their leader-election leases at 13:26:12 to 13:26:14 and restarted once each:
+  E1123 13:26:12 leaderelection.go: failed to renew lease kube-system/kube-scheduler: context deadline exceeded
+  E1123 13:26:14 server.go:298 "Leaderelection lost"
+After the install (13:27:55 UTC): /readyz ok; master I/O pressure avg10 0.17%; both components Running; all apps healthy.
+
+## 7. Gateway API (+5): not attempted
+Rule set for this bonus: only if the Helm install left the cluster calm. It did not (section 6): a moderate burst of
+API writes was enough to stall etcd and restart two control-plane components. Installing Gateway API CRDs and a
+controller writes more to the same etcd, so it was skipped to keep both required deployments safe.

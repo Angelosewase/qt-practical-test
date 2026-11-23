@@ -39,7 +39,10 @@ qt-practical-test/
 │   ├── 40-api.yaml        Deployment and Service (Go API)
 │   ├── 50-frontend.yaml   Deployment and Service (SPA)
 │   ├── 60-gateway.yaml    nginx Deployment and NodePort 30080
-│   └── secret.example.yaml   Template only; the real Secret is made by scripts/k8s-secrets.sh
+│   ├── secret.example.yaml   Template only; the real Secret is made by scripts/k8s-secrets.sh
+│   └── helm/              Bonus: Helm chart
+│       ├── projecthub/    Chart.yaml, values.yaml (images, replicas, resources, NodePort, PV), templates/
+│       └── values-qt-spring-app-helm.yaml   Overrides for the second copy (namespace qt-spring-app-helm, NodePort 30081)
 ├── app/                   ProjectHub source, copied from the exam GitLab without its .git
 │   ├── backend/           Go 1.23 API (Gin, MongoDB, Valkey)
 │   └── frontend/          React 18 + Vite SPA
@@ -48,6 +51,7 @@ qt-practical-test/
 │   ├── <vm>/collect-20261123T112333Z.txt   Text snapshot per VM (make collect-monitoring)
 │   ├── task1-evidence.txt … task4-evidence.txt   Evidence per task
 │   ├── grading-checks.txt Live checks for brief requirements (make grading-checks)
+│   ├── bonus-evidence.txt Helm release checks; why Gateway API was not attempted
 │   ├── final-verify.txt   verify.sh, 39 of 39 on all four URLs
 │   ├── resilience-evidence.txt, resilience-master-run.txt   Clean resilience runs (laptop, master)
 │   ├── resilience-attempts/   Runs that were not clean (host stalls), kept on purpose
@@ -56,6 +60,7 @@ qt-practical-test/
 │   ├── pre-commit, secret-scan.sh   Secret guard (staged, tree, history)
 │   ├── gen-env.sh, gen-inventory.sh Generate docker/.env and ansible/inventory.ini
 │   ├── k8s-render.sh, k8s-secrets.sh, k8s-validate.sh, k8s-policy-check.py, check-nginx-parity.py
+│   ├── helm-parity.py     Proves the chart's default render equals k8s/
 │   ├── verify.sh          Browser-style functional test against any base URL
 │   ├── resilience-demo.sh Task 4 resilience proof with a strict verdict
 │   ├── collect.sh, collect-monitoring.sh   Read-only monitoring snapshots

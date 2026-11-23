@@ -1,0 +1,6 @@
+apiVersion: v2
+name: projecthub
+description: ProjectHub (Go API, React SPA, MongoDB, Valkey, nginx gateway). Same objects as the plain manifests in k8s/.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

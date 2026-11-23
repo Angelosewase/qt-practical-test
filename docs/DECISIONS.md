@@ -447,3 +447,19 @@ The brief asks that the Spring Boot JVM heap fit within its container limit. The
 
 Before submission the repo was checked file by file against the Makefile, the scripts and the docs. Superseded snapshots and the owner's capture checklist were removed, and five screenshots were renamed so their names match their content. Every remaining screenshot is embedded in the README. The full list with reasons is in `docs/CLEANUP.md`. The tag `v1-required` marks the state before cleanup.
 
+## D-HELM-1. One chart, proven equal to k8s/
+
+The chart in `k8s/helm/projecthub` is a templated copy of `k8s/`, not a new design. With default values it renders the same 14 objects as `scripts/k8s-render.sh`. `scripts/helm-parity.py` compares them field by field. It ignores only `metadata.labels`, because Helm adds `managed-by` and `helm.sh/chart` (selectors and pod labels are in `spec` and are compared). It also ignores the `checksum/config` annotation, whose input differs. `make helm-lint` runs the parity check every time, so `k8s/` and the chart cannot drift apart unnoticed. The Namespace object is not in the chart: Helm installs into a namespace, and the Secret step creates it first.
+
+## D-HELM-2. Secrets stay out of the chart and out of the release
+
+The chart has no Secret template and no secret values. It references `existingSecret: app-secrets`, which `make helm-deploy` creates from `docker/.env` with the same `scripts/k8s-secrets.sh` as Task 4 (namespace via `K8S_NAMESPACE`). The other option, `--set` with secret values, would store them in Helm's release record inside the cluster and in shell history. The secret scan also checks these values (D-SEC-1).
+
+## D-HELM-3. A second copy next to the plain deployment
+
+The release runs in `qt-spring-app-helm` on NodePort 30081 and leaves the main deployment on 30080 untouched. PersistentVolumes are cluster-scoped, so the copy has its own PV (`projecthub-helm-mongo-data`, storage class `projecthub-helm-local`, host path `/srv/projecthub-helm/mongo`). It is pinned by `kubernetes.io/hostname` to `c3-k8s-worker-2`, the worker that does not hold the main MongoDB volume, so no new node label is needed. CORS origins for port 30081 are set in the override file (D-CORS-1 applies to every port). `k8s-policy-check.py` takes the namespace and NodePort from the environment, with defaults unchanged, so the same rules apply to both copies.
+
+## D-GW-1. Gateway API not attempted
+
+The condition for this bonus was a calm cluster after the Helm install. The install (about 15 objects and 8 pods) caused 11 etcd `slow fdatasync` warnings in 43 s, the worst 6.4 s. The scheduler and the controller-manager lost their leases and restarted once each (13:26 UTC). Both recovered within a minute, but that is the instability described in D-STOR-1. A Gateway API install means vendored CRDs, a controller with its own leader election, and a Gateway and HTTPRoutes. It adds steady and burst load on the same etcd, so it was skipped. NodePort 30080 stays the main URL, served by the nginx gateway Deployment.
+
