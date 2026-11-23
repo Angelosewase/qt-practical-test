@@ -13,7 +13,7 @@ TF_ENV = $(LOAD_SECRETS); \
 	export TF_VAR_ssh_public_key="$$(cat $(CURDIR)/.private/ssh/id_ed25519.pub)"
 
 # Ansible targets are listed after the Kubernetes ones.
-.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify collect-monitoring
+.PHONY: help setup secret-scan tf-fmt tf-validate tf-init tf-plan tf-apply tf-output env hadolint compose-config docker-build docker-push compose-up compose-down compose-logs verify k8s-render k8s-validate k8s-secrets k8s-deploy k8s-status k8s-verify collect-monitoring ansible
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -128,3 +128,5 @@ ansible-run: ## Run the full playbook. Sources .private/secrets.env so VM_PASSWO
 
 collect-monitoring: ## Collect resource and health snapshots from all 4 VMs into monitoring/<host>/ (read-only)
 	scripts/collect-monitoring.sh
+
+ansible: ansible-run ## Alias for the brief's target name: full playbook (same as ansible-run)

@@ -337,78 +337,190 @@ Other text evidence: [monitoring/final-verify.txt](monitoring/final-verify.txt) 
 
 ### Screenshots
 
-Each image is referenced by its filename and embedded with a relative path. They render once you add them to `monitoring/`.
+Each image is embedded with its relative path and has a one-line caption. The files are in [monitoring/screenshots/](monitoring/screenshots/). Filenames follow [monitoring/SCREENSHOTS.md](monitoring/SCREENSHOTS.md); the four browser shots use the names you chose (see the mapping in that file).
+
 
 #### Per VM: top, df -h, free -h, uptime, ss -tulpn
 
-**c3-docker-host** (192.168.160.11)
 
-![c3-docker-host top](monitoring/c3-docker-host-top.png)
-![c3-docker-host df](monitoring/c3-docker-host-df.png)
-![c3-docker-host free](monitoring/c3-docker-host-free.png)
-![c3-docker-host uptime](monitoring/c3-docker-host-uptime.png)
-![c3-docker-host ss](monitoring/c3-docker-host-ss.png)
+**c3-docker-host (192.168.160.11)**
 
+![c3-docker-host top](monitoring/screenshots/c3-docker-host-top.png)
 
-**c3-k8s-master** (192.168.160.17)
+*c3-docker-host: top: processes and CPU and memory use*
 
-![c3-k8s-master top](monitoring/c3-k8s-master-top.png)
-![c3-k8s-master df](monitoring/c3-k8s-master-df.png)
-![c3-k8s-master free](monitoring/c3-k8s-master-free.png)
-![c3-k8s-master uptime](monitoring/c3-k8s-master-uptime.png)
-![c3-k8s-master ss](monitoring/c3-k8s-master-ss.png)
+![c3-docker-host df](monitoring/screenshots/c3-docker-host-df.png)
 
+*c3-docker-host: df -h: disk space per partition*
 
-**c3-k8s-worker-1** (192.168.160.33)
+![c3-docker-host free](monitoring/screenshots/c3-docker-host-free.png)
 
-![c3-k8s-worker-1 top](monitoring/c3-k8s-worker-1-top.png)
-![c3-k8s-worker-1 df](monitoring/c3-k8s-worker-1-df.png)
-![c3-k8s-worker-1 free](monitoring/c3-k8s-worker-1-free.png)
-![c3-k8s-worker-1 uptime](monitoring/c3-k8s-worker-1-uptime.png)
-![c3-k8s-worker-1 ss](monitoring/c3-k8s-worker-1-ss.png)
+*c3-docker-host: free -h: total, used and available memory*
+
+![c3-docker-host uptime](monitoring/screenshots/c3-docker-host-uptime.png)
+
+*c3-docker-host: uptime: load averages for 1, 5 and 15 minutes*
+
+![c3-docker-host ss](monitoring/screenshots/c3-docker-host-ss.png)
+
+*c3-docker-host: sudo ss -tulpn: listening ports and the services behind them*
 
 
-**c3-k8s-worker-2** (192.168.160.98)
+**c3-k8s-master (192.168.160.17)**
 
-![c3-k8s-worker-2 top](monitoring/c3-k8s-worker-2-top.png)
-![c3-k8s-worker-2 df](monitoring/c3-k8s-worker-2-df.png)
-![c3-k8s-worker-2 free](monitoring/c3-k8s-worker-2-free.png)
-![c3-k8s-worker-2 uptime](monitoring/c3-k8s-worker-2-uptime.png)
-![c3-k8s-worker-2 ss](monitoring/c3-k8s-worker-2-ss.png)
+![c3-k8s-master top](monitoring/screenshots/c3-k8s-master-top.png)
+
+*c3-k8s-master: top: processes and CPU and memory use*
+
+![c3-k8s-master df](monitoring/screenshots/c3-k8s-master-df.png)
+
+*c3-k8s-master: df -h: disk space per partition*
+
+![c3-k8s-master free](monitoring/screenshots/c3-k8s-master-free.png)
+
+*c3-k8s-master: free -h: total, used and available memory*
+
+![c3-k8s-master uptime](monitoring/screenshots/c3-k8s-master-uptime.png)
+
+*c3-k8s-master: uptime: load averages for 1, 5 and 15 minutes*
+
+![c3-k8s-master ss](monitoring/screenshots/c3-k8s-master-ss.png)
+
+*c3-k8s-master: sudo ss -tulpn: listening ports and the services behind them*
+
+
+**c3-k8s-worker-1 (192.168.160.33)**
+
+![c3-k8s-worker-1 top](monitoring/screenshots/c3-k8s-worker-1-top.png)
+
+*c3-k8s-worker-1: top: processes and CPU and memory use*
+
+![c3-k8s-worker-1 df](monitoring/screenshots/c3-k8s-worker-1-df.png)
+
+*c3-k8s-worker-1: df -h: disk space per partition*
+
+![c3-k8s-worker-1 free](monitoring/screenshots/c3-k8s-worker-1-free.png)
+
+*c3-k8s-worker-1: free -h: total, used and available memory*
+
+![c3-k8s-worker-1 uptime](monitoring/screenshots/c3-k8s-worker-1-uptime.png)
+
+*c3-k8s-worker-1: uptime: load averages for 1, 5 and 15 minutes*
+
+![c3-k8s-worker-1 ss](monitoring/screenshots/c3-k8s-worker-1-ss.png)
+
+*c3-k8s-worker-1: sudo ss -tulpn: listening ports and the services behind them*
+
+
+**c3-k8s-worker-2 (192.168.160.98)**
+
+![c3-k8s-worker-2 top](monitoring/screenshots/c3-k8s-worker-2-top.png)
+
+*c3-k8s-worker-2: top: processes and CPU and memory use*
+
+![c3-k8s-worker-2 df](monitoring/screenshots/c3-k8s-worker-2-df.png)
+
+*c3-k8s-worker-2: df -h: disk space per partition*
+
+![c3-k8s-worker-2 free](monitoring/screenshots/c3-k8s-worker-2-free.png)
+
+*c3-k8s-worker-2: free -h: total, used and available memory*
+
+![c3-k8s-worker-2 uptime](monitoring/screenshots/c3-k8s-worker-2-uptime.png)
+
+*c3-k8s-worker-2: uptime: load averages for 1, 5 and 15 minutes*
+
+![c3-k8s-worker-2 ss](monitoring/screenshots/c3-k8s-worker-2-ss.png)
+
+*c3-k8s-worker-2: sudo ss -tulpn: listening ports and the services behind them*
+
 
 #### Docker host: containers, logs, cache, health
 
-![docker ps](monitoring/c3-docker-host-docker-ps.png)
-![docker stats](monitoring/c3-docker-host-docker-stats.png)
-![API log, last 50 lines](monitoring/c3-docker-host-api-logs.png)
-![Valkey cache: memory, hits and misses, cached keys](monitoring/c3-docker-host-valkey-cache.png)
-![health through NGINX](monitoring/c3-docker-host-health.png)
+![docker ps](monitoring/screenshots/c3-docker-host-docker-ps.png)
+
+*docker ps: running containers and their health*
+
+![docker stats](monitoring/screenshots/c3-docker-host-docker-stats.png)
+
+*docker stats --no-stream: CPU, memory and I/O per container*
+
+![API log](monitoring/screenshots/c3-docker-host-api-logs.png)
+
+*API container log, last 50 lines (health checks)*
+
+![Valkey cache](monitoring/screenshots/c3-docker-host-valkey-cache.png)
+
+*Valkey cache: memory, keyspace hits and misses, cached keys*
+
+![health through NGINX](monitoring/screenshots/c3-docker-host-health.png)
+
+*health endpoint through NGINX on port 80*
+
 
 #### Control plane: nodes, pods, metrics, health
 
-![kubectl get nodes](monitoring/c3-k8s-master-kubectl-get-nodes.png)
-![kubectl get pods -A](monitoring/c3-k8s-master-kubectl-get-pods-A.png)
-![kubectl top nodes](monitoring/c3-k8s-master-kubectl-top-nodes.png)
-![health through the NodePort](monitoring/c3-k8s-master-health.png)
+![kubectl get nodes](monitoring/screenshots/c3-k8s-master-kubectl-get-nodes.png)
 
-#### Resilience demo (run from /home/devops on the master)
+*kubectl get nodes -o wide: three nodes Ready*
 
-![resilience demo, start](monitoring/resilience-demo-start.png)
-![resilience demo, pod delete](monitoring/resilience-demo-pod-delete.png)
-![resilience demo, cache down](monitoring/resilience-demo-cache-down.png)
-![resilience demo, summary](monitoring/resilience-demo-summary.png)
+![kubectl get pods -A](monitoring/screenshots/c3-k8s-master-kubectl-get-pods-A.png)
+
+*kubectl get pods -A -o wide: all pods, status, restarts and placement*
+
+![kubectl top nodes](monitoring/screenshots/c3-k8s-master-kubectl-top-nodes.png)
+
+*kubectl top nodes: CPU and memory per node from metrics-server*
+
+![health through the NodePort](monitoring/screenshots/c3-k8s-master-health.png)
+
+*health endpoint through NodePort 30080*
+
+
+#### Resilience demo (run from /home/devops on the control plane)
+
+![resilience demo, start](monitoring/screenshots/resilience-demo-start.png)
+
+*start: pods before, API 2/2, Valkey 1/1, health cache up*
+
+![resilience demo, pod delete](monitoring/screenshots/resilience-demo-pod-delete.png)
+
+*phase c: API pod deleted during the request loop, replacement becomes Ready*
+
+![resilience demo, cache down](monitoring/screenshots/resilience-demo-cache-down.png)
+
+*phase d: Valkey scaled to 0, cache down, login and list still work*
+
+![resilience demo, summary](monitoring/screenshots/resilience-demo-summary.png)
+
+*verdict CLEAN: requests sent, zero failed, zero kubectl errors, final state correct*
+
 
 #### The application in a browser
 
 Docker Compose, http://192.168.160.11:
 
-![Compose login](monitoring/app-compose-login.png)
-![Compose project list](monitoring/app-compose-project.png)
+![Compose login](monitoring/screenshots/docker-deployed-app-login.png)
+
+*login page on Docker Compose*
+
+![Compose project list](monitoring/screenshots/docker-deployed-projects-page.png)
+
+*project list after login on Docker Compose*
+
 
 Kubernetes NodePort, http://192.168.160.17:30080:
 
-![Kubernetes login](monitoring/app-k8s-login.png)
-![Kubernetes project list](monitoring/app-k8s-project.png)
+![Kubernetes login](monitoring/screenshots/K8s-deployed-login-page.png)
+
+*login page on the Kubernetes NodePort*
+
+![Kubernetes project](monitoring/screenshots/K8s-deployed-project-details-page.png)
+
+*project page after login on the Kubernetes NodePort*
+
+
+The 403 page shown on Compose for a manager opening `/users` is the role check working as designed (only admins may open the user list). It is not part of the login flow and is not embedded.
 
 
 ## Troubleshooting: login returns 403
