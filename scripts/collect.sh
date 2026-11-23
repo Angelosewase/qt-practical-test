@@ -54,6 +54,11 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   runsh "application health through NGINX (port 80)" 'curl -s -m 10 -w "  HTTP %{http_code}\n" http://127.0.0.1/api/health; curl -s -o /dev/null -m 10 -w "frontend / HTTP %{http_code}\n" http://127.0.0.1/'
 fi
 
+run "storage pressure (PSI: time waiting for I/O and memory)" bash -c 'cat /proc/pressure/io /proc/pressure/memory 2>/dev/null'
+if command -v kubectl >/dev/null 2>&1 && kubectl version --client >/dev/null 2>&1 && kubectl get nodes >/dev/null 2>&1; then
+  runsh "etcd slow disk warnings, last 30 minutes (control plane only)" 'id=$(sudo -n crictl ps --name etcd -q 2>/dev/null | head -1); [ -n "$id" ] && sudo -n crictl logs --tail 5000 "$id" 2>&1 | grep -c "slow fdatasync" | sed "s/^/slow_fdatasync_last_5000_log_lines=/"; true'
+fi
+
 if command -v kubectl >/dev/null 2>&1 && kubectl version --client >/dev/null 2>&1 && kubectl get nodes >/dev/null 2>&1; then
   run "kubernetes nodes, status and readiness" kubectl get nodes -o wide
   run "kubernetes pods in all namespaces (status, restarts, placement)" kubectl get pods -A -o wide

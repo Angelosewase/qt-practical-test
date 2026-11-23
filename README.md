@@ -18,7 +18,7 @@ Docker Compose on one VM, and Kubernetes on a three-node kubeadm cluster.
 | App analysis and move into `app/` | Done |
 | Task 2: Docker images and Compose (`docker/`) | **Deployed on c3-docker-host** (http://192.168.160.11). Images pushed to Docker Hub as `angelsewase/projecthub-api:1.0.0` and `angelsewase/projecthub-frontend:1.0.0`. 34 of 34 functional checks pass on the VM |
 | Task 3: Ansible Kubernetes cluster (`ansible/`) | Not started (needs the VMs) |
-| Task 4: Kubernetes deployment (`k8s/`) | **Deployed on the exam cluster**. NodePort http://192.168.160.17:30080 (also .33 and .98). `verify.sh` 34 of 34. Resilience proof: 174 requests, 0 failed |
+| Task 4: Kubernetes deployment (`k8s/`) | **Deployed on the exam cluster**. NodePort http://192.168.160.17:30080 (also .33 and .98). `verify.sh` 34 of 34. Resilience proof: clean runs from the laptop (302 requests, 0 failed) and the control plane (394, 0 failed). Control-plane instability caused by the Proxmox host, see the resilience section |
 | Task 5: Monitoring (`monitoring/`) | Text evidence collected from all 4 VMs (`make collect-monitoring`), metrics-server installed. Screenshots: checklist in `monitoring/SCREENSHOTS.md`, **to be taken by hand** |
 
 ## Architecture
@@ -230,25 +230,43 @@ The app has no diary entries and no search. The "create and search" requirement 
 
 ## Kubernetes resilience proof
 
-Run on the exam cluster. Full output with timestamps on every line: [monitoring/resilience-evidence.txt](monitoring/resilience-evidence.txt).
-Re-run it live from the laptop or the control plane:
+Run on the exam cluster. Full timestamped output: [monitoring/resilience-evidence.txt](monitoring/resilience-evidence.txt)
+(laptop run, clean) and [monitoring/resilience-master-run.txt](monitoring/resilience-master-run.txt) (run on the control plane
+from `/home/devops`, clean). Earlier attempts that were not clean are kept in [monitoring/resilience-attempts/](monitoring/resilience-attempts/).
 
 ```bash
-KUBECONFIG=.private/kubeconfig scripts/resilience-demo.sh | tee monitoring/resilience-evidence.txt
+KUBECONFIG=.private/kubeconfig scripts/resilience-demo.sh | tee monitoring/resilience-evidence.txt   # laptop
+cd /home/devops && bash resilience-demo.sh                                                          # on the control plane
 ```
 
-| Step | Key output | What it proves |
+| Step | Key output (clean run, 11:23 to 11:25 UTC) | What it proves |
 |---|---|---|
-| a. Before | `api` 2/2 Ready, `valkey` 1/1, `mongodb-0` on `c3-k8s-worker-1`. Health `{"status":"ok","database":"up","cache":"up"}` | Starting point: every pod is Ready and the cache is up |
-| b. Scale API to 3 | `3 of 3 pods Ready for app.kubernetes.io/name=api` | Replicas are created and become Ready before taking traffic |
-| c. Delete one API pod during the loop | Deleted pod goes `Completed`; replacement goes `Init:0/1`, then `Running 0/1`, then `1/1`. Loop: 61 requests in this window, **0 failed** | A pod can disappear and the service keeps answering: the Service routes around it and the readiness gate protects the replacement |
-| d. Valkey to 0 | `"cache":"down"` on every sample, login as `manager@qt.rw` OK, list projects `HTTP 200, 1 project(s)`. Valkey back: `"cache":"up"` | The cache is optional: losing it degrades speed, not correctness |
-| e. API back to 2 | `2 of 2 pods Ready` | The deployment returns to its normal size |
-| Loop summary | `requests sent: 174   non-200 or failed: 0` | Across all phases, no request failed |
+| a. Before | `api` 2/2, `valkey` 1/1, `mongodb-0` on `c3-k8s-worker-1`, health `{"status":"ok","database":"up","cache":"up"}` | Starting point: every pod is Ready and the cache is up |
+| b. Scale API to 3 | `3 of 3 pods Ready for app.kubernetes.io/name=api`, 68 requests, 0 failed | New replicas are created and become Ready before they take traffic |
+| c. Delete one API pod during the loop | The deleted pod goes `Terminating`. The replacement goes `Init:0/1`, then `Running 0/1`, then `1/1`. 134 requests in this window, **0 failed** | The Service routes around a pod that disappears, and the readiness gate protects the replacement |
+| d. Valkey to 0 | `"cache":"down"` on all three samples. Login as `manager@qt.rw` OK, list projects `HTTP 200, 1 project(s)`. Valkey back: `"cache":"up"` | The cache is optional: losing it slows requests but does not break them |
+| e. API back to 2 | `2 of 2 pods Ready`, 23 requests, 0 failed | The deployment returns to its normal size |
+| Loop summary | `requests sent: 302   non-200 or failed: 0`, `kubectl errors seen: 0`, `RESULT: CLEAN` | Across all phases, no request failed and no kubectl call needed a retry |
 
-Notes on the evidence: the request loop asks for `/api/health` every 0.2 s through the NodePort. Each request
-takes some time itself, so the average gap was about 0.26 s. The `Completed` status during scale-down is the
-pod shutting down gracefully, not a crash. The API exits cleanly on SIGTERM.
+The master run (copied to `/home/devops`) was also clean: `requests sent: 394`, 0 failed, 0 kubectl errors.
+
+Notes: the request loop asks for `/api/health` every 0.2 s through the NodePort. Each request takes some time itself,
+so the average gap was about 0.26 s. The `Completed` or `Terminating` status during scale-down is a pod shutting down
+gracefully, not a crash.
+
+### Verdict rules and control-plane stability
+
+`resilience-demo.sh` does not claim success on its own. It prints `RESULT: CLEAN` only if all of these hold: no
+kubectl call needed a retry, no phase failed, no request failed, and the final state is correct (API 2/2, Valkey 1/1,
+cache up). It always restores Valkey to 1 and the API to 2 on exit, even after an error or Ctrl-C.
+
+The control plane of this exam cluster is not fully stable. During testing (10:42 to 11:05 UTC) etcd on the control
+plane repeatedly could not write to its disk in time, and the API server, controller-manager and scheduler were
+affected: `kubectl` timeouts, two crash-looping control-plane components, and an API server that briefly refused
+connections. The cause is on the Proxmox host, not in the cluster; the analysis and proposals are in
+[docs/DECISIONS.md](docs/DECISIONS.md) (D-STOR-1 to D-STOR-4). One of the three runs that followed the fixes was not
+clean: it logged two `/readyz` failures from etcd (the script waited and continued, and the verdict correctly said
+`NOT CLEAN`). The two clean runs above came after the fixes.
 
 ### Why Valkey needs no persistent storage
 

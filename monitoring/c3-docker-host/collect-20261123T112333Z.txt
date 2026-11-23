@@ -1,0 +1,240 @@
+# collect.sh on c3-docker-host at 2026-11-23T11:23:34Z (UTC)
+
+##### 2026-11-23T11:23:34Z  host=c3-docker-host  identity
+$ grep PRETTY_NAME /etc/os-release; uname -r; nproc; free -m | awk "/Mem/{print \"mem_total_mb=\"\$2}"
+PRETTY_NAME="Kali GNU/Linux Rolling"
+7.1.5+kali-cloud-amd64
+4
+mem_total_mb=3919
+[exit=0 at 2026-11-23T11:23:34Z]
+
+##### 2026-11-23T11:23:34Z  host=c3-docker-host  uptime and load averages (1, 5, 15 min)
+$ uptime
+ 11:23:34 up  2:38,  3 users,  load average: 0.15, 0.24, 0.35
+[exit=0 at 2026-11-23T11:23:34Z]
+
+##### 2026-11-23T11:23:34Z  host=c3-docker-host  top (batch mode, one iteration, top 25 lines)
+$ bash -c top -b -n 1 | head -n 25
+top - 11:23:34 up  2:38,  3 users,  load average: 0.15, 0.24, 0.35
+Tasks: 147 total, 1 running, 146 sleep, 0 d-sleep, 0 stopped, 0 zombie
+%Cpu(s):  1.2 us,  2.3 sy,  0.0 ni, 96.5 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st 
+MiB Mem :   3919.4 total,   1006.9 free,    781.5 used,   2437.6 buff/cache     
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   3137.9 avail Mem 
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+      1 root      20   0   27344  17056  12324 S   0.0   0.4   0:05.37 systemd
+      2 root      20   0       0      0      0 S   0.0   0.0   0:00.01 kthreadd
+      3 root      20   0       0      0      0 S   0.0   0.0   0:00.00 pool_wo+
+      4 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      5 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      6 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      7 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      8 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+     10 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+     13 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+     14 root      20   0       0      0      0 S   0.0   0.0   0:00.12 ksoftir+
+     15 root      20   0       0      0      0 I   0.0   0.0   0:01.37 rcu_pre+
+     16 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_exp+
+     17 root      20   0       0      0      0 S   0.0   0.0   0:00.16 rcu_exp+
+     18 root      rt   0       0      0      0 S   0.0   0.0   0:00.04 migrati+
+     19 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kprobe-+
+     20 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 idle_in+
+     21 root      20   0       0      0      0 S   0.0   0.0   0:00.00 cpuhp/0
+[exit=0 at 2026-11-23T11:23:34Z]
+
+##### 2026-11-23T11:23:34Z  host=c3-docker-host  processes by CPU and memory
+$ bash -c ps -eo pid,user,%cpu,%mem,rss,comm --sort=-%cpu | head -n 15
+    PID USER     %CPU %MEM   RSS COMMAND
+  64806 devops    100  0.1  4872 ps
+  64733 devops   12.5  0.2 12024 systemd
+  64769 root      1.8  0.2 11520 sshd-session
+   3947 root      1.0  1.7 71164 containerd
+   5947 999       0.5  5.1 205144 mongod
+   5516 root      0.3  3.0 122652 dockerd
+   6125 root      0.2  0.3 13900 valkey-server
+   5926 10001     0.2  0.6 27832 projecthub-api
+   5831 root      0.0  0.4 17164 containerd-shim
+    664 root      0.0  0.1  4920 qemu-ga
+   5803 root      0.0  0.4 16720 containerd-shim
+      1 root      0.0  0.4 17056 systemd
+   5834 root      0.0  0.4 18672 containerd-shim
+   5773 root      0.0  0.4 18520 containerd-shim
+[exit=0 at 2026-11-23T11:23:34Z]
+
+##### 2026-11-23T11:23:34Z  host=c3-docker-host  df -h (disk space per partition)
+$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1        30G  3.0G   25G  11% /
+devtmpfs        1.9G     0  1.9G   0% /dev
+tmpfs           2.0G     0  2.0G   0% /dev/shm
+tmpfs           784M  1.1M  783M   1% /run
+none            1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+tmpfs           2.0G  8.0K  2.0G   1% /tmp
+none            1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
+/dev/sda15      124M  310K  124M   1% /boot/efi
+none            1.0M     0  1.0M   0% /run/credentials/systemd-networkd.service
+none            1.0M     0  1.0M   0% /run/credentials/getty@tty1.service
+none            1.0M     0  1.0M   0% /run/credentials/serial-getty@ttyS0.service
+tmpfs           392M  4.0K  392M   1% /run/user/0
+tmpfs           392M  4.0K  392M   1% /run/user/1001
+[exit=0 at 2026-11-23T11:23:34Z]
+
+##### 2026-11-23T11:23:34Z  host=c3-docker-host  free -h (memory)
+$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:           3.8Gi       782Mi       1.0Gi       1.1Mi       2.4Gi       3.1Gi
+Swap:             0B          0B          0B
+[exit=0 at 2026-11-23T11:23:34Z]
+
+##### 2026-11-23T11:23:34Z  host=c3-docker-host  vmstat 1 3 (virtual memory and disk I/O)
+$ vmstat 1 3
+procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st gu
+ 0  0      0 1029996 46004 2450072   0    0    39   247  824    3  2  1 93  5  0  0
+ 1  0      0 917136  46004 2450080   0    0     0     0 4071 7027 14  4 82  0  0  0
+ 0  0      0 999544  46004 2450084   0    0     0     4 1794 2776  3  1 96  0  0  0
+[exit=0 at 2026-11-23T11:23:36Z]
+
+##### 2026-11-23T11:23:36Z  host=c3-docker-host  listening sockets (ss -tulpn)
+$ sudo -n ss -tulpn 2>/dev/null || ss -tuln
+Netid State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess
+udp   UNCONN 0      0         127.0.0.54:53        0.0.0.0:*    users:(("systemd-resolve",pid=467,fd=22))
+udp   UNCONN 0      0      127.0.0.53%lo:53        0.0.0.0:*    users:(("systemd-resolve",pid=467,fd=20))
+udp   UNCONN 0      0            0.0.0.0:5355      0.0.0.0:*    users:(("systemd-resolve",pid=467,fd=13))
+udp   UNCONN 0      0               [::]:5355         [::]:*    users:(("systemd-resolve",pid=467,fd=15))
+tcp   LISTEN 0      4096         0.0.0.0:5355      0.0.0.0:*    users:(("systemd-resolve",pid=467,fd=14))
+tcp   LISTEN 0      4096      127.0.0.54:53        0.0.0.0:*    users:(("systemd-resolve",pid=467,fd=23))
+tcp   LISTEN 0      4096         0.0.0.0:80        0.0.0.0:*    users:(("docker-proxy",pid=6096,fd=8))
+tcp   LISTEN 0      4096   127.0.0.53%lo:53        0.0.0.0:*    users:(("systemd-resolve",pid=467,fd=21))
+tcp   LISTEN 0      128          0.0.0.0:22        0.0.0.0:*    users:(("sshd",pid=1807,fd=6))
+tcp   LISTEN 0      4096            [::]:5355         [::]:*    users:(("systemd-resolve",pid=467,fd=16))
+tcp   LISTEN 0      4096            [::]:80           [::]:*    users:(("docker-proxy",pid=6104,fd=8))
+tcp   LISTEN 0      128             [::]:22           [::]:*    users:(("sshd",pid=1807,fd=7))
+[exit=0 at 2026-11-23T11:23:36Z]
+
+##### 2026-11-23T11:23:36Z  host=c3-docker-host  network addresses
+$ ip -4 -brief addr
+lo               UNKNOWN        127.0.0.1/8 
+eth0             UP             192.168.160.11/24 metric 100 
+docker0          DOWN           172.17.0.1/16 
+br-1d186a026ebd  UP             172.19.0.1/16 
+br-02e7b856766d  UP             172.18.0.1/16 
+[exit=0 at 2026-11-23T11:23:36Z]
+
+##### 2026-11-23T11:23:36Z  host=c3-docker-host  docker ps (running containers and their state)
+$ docker ps
+CONTAINER ID   IMAGE                                   COMMAND                  CREATED       STATUS                 PORTS                                 NAMES
+2ba0e401724c   nginx:1.27.5-alpine                     "/docker-entrypoint.…"   2 hours ago   Up 2 hours (healthy)   0.0.0.0:80->80/tcp, [::]:80->80/tcp   projecthub-nginx-1
+2f6ae8a15f4f   angelsewase/projecthub-api:1.0.0        "/usr/local/bin/proj…"   2 hours ago   Up 2 hours (healthy)   8080/tcp                              projecthub-api-1
+ceb7ecf626ac   mongo:7.0.14                            "docker-entrypoint.s…"   2 hours ago   Up 2 hours (healthy)   27017/tcp                             projecthub-mongodb-1
+e861d8959ba7   valkey/valkey:8.1.12-alpine             "tini -- docker-entr…"   2 hours ago   Up 2 hours (healthy)   6379/tcp                              projecthub-valkey-1
+8c749014d268   angelsewase/projecthub-frontend:1.0.0   "/docker-entrypoint.…"   2 hours ago   Up 2 hours (healthy)   8080/tcp                              projecthub-frontend-1
+[exit=0 at 2026-11-23T11:23:36Z]
+
+##### 2026-11-23T11:23:36Z  host=c3-docker-host  docker stats --no-stream (CPU, memory, network and I/O per container)
+$ docker stats --no-stream
+CONTAINER ID   NAME                    CPU %     MEM USAGE / LIMIT   MEM %     NET I/O           BLOCK I/O     PIDS
+2ba0e401724c   projecthub-nginx-1      0.00%     4.5MiB / 128MiB     3.52%     845kB / 728kB     0B / 4.1kB    5
+2f6ae8a15f4f   projecthub-api-1        0.14%     17.72MiB / 512MiB   3.46%     2.62MB / 4.11MB   0B / 0B       10
+ceb7ecf626ac   projecthub-mongodb-1    0.42%     122.7MiB / 1GiB     11.99%    407kB / 679kB     0B / 19.9MB   38
+e861d8959ba7   projecthub-valkey-1     0.24%     8.84MiB / 256MiB    3.45%     3.6MB / 1.83MB    0B / 0B       6
+8c749014d268   projecthub-frontend-1   0.00%     4.297MiB / 128MiB   3.36%     260kB / 628kB     0B / 4.1kB    5
+[exit=0 at 2026-11-23T11:23:39Z]
+
+##### 2026-11-23T11:23:39Z  host=c3-docker-host  compose services (health)
+$ docker compose -f /opt/projecthub/docker/docker-compose.yml ps
+NAME                    IMAGE                                   COMMAND                  SERVICE    CREATED       STATUS                 PORTS
+projecthub-api-1        angelsewase/projecthub-api:1.0.0        "/usr/local/bin/proj…"   api        2 hours ago   Up 2 hours (healthy)   8080/tcp
+projecthub-frontend-1   angelsewase/projecthub-frontend:1.0.0   "/docker-entrypoint.…"   frontend   2 hours ago   Up 2 hours (healthy)   8080/tcp
+projecthub-mongodb-1    mongo:7.0.14                            "docker-entrypoint.s…"   mongodb    2 hours ago   Up 2 hours (healthy)   27017/tcp
+projecthub-nginx-1      nginx:1.27.5-alpine                     "/docker-entrypoint.…"   nginx      2 hours ago   Up 2 hours (healthy)   0.0.0.0:80->80/tcp, [::]:80->80/tcp
+projecthub-valkey-1     valkey/valkey:8.1.12-alpine             "tini -- docker-entr…"   valkey     2 hours ago   Up 2 hours (healthy)   6379/tcp
+[exit=0 at 2026-11-23T11:23:39Z]
+
+##### 2026-11-23T11:23:39Z  host=c3-docker-host  API container log, last 50 lines
+$ docker compose -f /opt/projecthub/docker/docker-compose.yml logs --tail=50 api
+api-1  | [GIN] 2026/11/23 - 11:11:16 | 200 |    1.287492ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:11:31 | 200 |     700.357µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:11:47 | 200 |    1.070756ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:12:02 | 200 |     696.895µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:12:17 | 200 |      765.67µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:12:32 | 200 |     782.114µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:12:47 | 200 |     739.141µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:13:02 | 200 |       722.4µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:13:17 | 200 |    1.023314ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:13:32 | 200 |     864.688µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:13:47 | 200 |    1.347387ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:14:02 | 200 |     961.926µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:14:17 | 200 |     804.544µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:14:32 | 200 |     766.677µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:14:48 | 200 |    1.244221ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:15:03 | 200 |     887.259µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:15:18 | 200 |     666.319µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:15:33 | 200 |     775.909µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:15:48 | 200 |     992.165µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:16:03 | 200 |    1.021284ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:16:18 | 200 |     700.027µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:16:33 | 200 |     724.679µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:16:48 | 200 |    2.557428ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:17:03 | 200 |     795.931µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:17:18 | 200 |      789.93µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:17:33 | 200 |    1.051591ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:17:49 | 200 |    1.300612ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:18:04 | 200 |     1.17684ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:18:19 | 200 |     745.348µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:18:34 | 200 |     760.693µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:18:49 | 200 |     816.074µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:19:04 | 200 |     839.763µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:19:19 | 200 |     793.767µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:19:34 | 200 |      709.23µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:19:49 | 200 |     694.836µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:20:04 | 200 |     685.548µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:20:19 | 200 |      709.17µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:20:34 | 200 |    1.054494ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:20:50 | 200 |    1.171895ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:21:05 | 200 |     920.015µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:21:20 | 200 |    1.668505ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:21:35 | 200 |     909.128µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:21:50 | 200 |    1.043327ms |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:22:05 | 200 |     880.559µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:22:20 | 200 |     893.991µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:22:35 | 200 |     723.632µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:22:50 | 200 |     747.414µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:23:05 | 200 |     844.699µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:23:20 | 200 |     694.647µs |       127.0.0.1 | GET      "/api/health"
+api-1  | [GIN] 2026/11/23 - 11:23:35 | 200 |     863.549µs |       127.0.0.1 | GET      "/api/health"
+[exit=0 at 2026-11-23T11:23:39Z]
+
+##### 2026-11-23T11:23:39Z  host=c3-docker-host  Valkey memory
+$ docker compose -f /opt/projecthub/docker/docker-compose.yml exec -T valkey sh -c 'valkey-cli info memory | grep -E "^used_memory_human|^used_memory_peak_human|^maxmemory_human"'
+used_memory_human:1.18M
+used_memory_peak_human:1.18M
+maxmemory_human:0B
+[exit=0 at 2026-11-23T11:23:39Z]
+
+##### 2026-11-23T11:23:39Z  host=c3-docker-host  Valkey hits and misses
+$ docker compose -f /opt/projecthub/docker/docker-compose.yml exec -T valkey sh -c 'valkey-cli info stats | grep -E "^keyspace_hits|^keyspace_misses"'
+keyspace_hits:78
+keyspace_misses:18
+[exit=0 at 2026-11-23T11:23:39Z]
+
+##### 2026-11-23T11:23:39Z  host=c3-docker-host  Valkey cached keys (projecthub:*)
+$ docker compose -f /opt/projecthub/docker/docker-compose.yml exec -T valkey sh -c 'valkey-cli --scan --pattern "projecthub:*" | wc -l'
+1
+[exit=0 at 2026-11-23T11:23:39Z]
+
+##### 2026-11-23T11:23:39Z  host=c3-docker-host  application health through NGINX (port 80)
+$ curl -s -m 10 -w "  HTTP %{http_code}\n" http://127.0.0.1/api/health; curl -s -o /dev/null -m 10 -w "frontend / HTTP %{http_code}\n" http://127.0.0.1/
+{"status":"ok","database":"up","cache":"up"}  HTTP 200
+frontend / HTTP 200
+[exit=0 at 2026-11-23T11:23:39Z]
+
+##### 2026-11-23T11:23:39Z  host=c3-docker-host  storage pressure (PSI: time waiting for I/O and memory)
+$ bash -c cat /proc/pressure/io /proc/pressure/memory 2>/dev/null
+some avg10=0.02 avg60=4.44 avg300=5.52 total=1138761210
+full avg10=0.02 avg60=4.35 avg300=5.41 total=1110690596
+some avg10=0.00 avg60=0.00 avg300=0.00 total=3779
+full avg10=0.00 avg60=0.00 avg300=0.00 total=3746
+[exit=0 at 2026-11-23T11:23:39Z]
+
+# end of collect.sh on c3-docker-host at 2026-11-23T11:23:39Z

@@ -1,0 +1,244 @@
+# collect.sh on c3-k8s-master at 2026-11-23T11:23:41Z (UTC)
+
+##### 2026-11-23T11:23:41Z  host=c3-k8s-master  identity
+$ grep PRETTY_NAME /etc/os-release; uname -r; nproc; free -m | awk "/Mem/{print \"mem_total_mb=\"\$2}"
+PRETTY_NAME="Kali GNU/Linux Rolling"
+7.1.5+kali-cloud-amd64
+4
+mem_total_mb=3919
+[exit=0 at 2026-11-23T11:23:41Z]
+
+##### 2026-11-23T11:23:41Z  host=c3-k8s-master  uptime and load averages (1, 5, 15 min)
+$ uptime
+ 11:23:41 up  2:38,  3 users,  load average: 0.34, 0.60, 1.04
+[exit=0 at 2026-11-23T11:23:41Z]
+
+##### 2026-11-23T11:23:41Z  host=c3-k8s-master  top (batch mode, one iteration, top 25 lines)
+$ bash -c top -b -n 1 | head -n 25
+top - 11:23:41 up  2:38,  3 users,  load average: 0.34, 0.60, 1.04
+Tasks: 151 total, 1 running, 150 sleep, 0 d-sleep, 0 stopped, 0 zombie
+%Cpu(s):  2.3 us,  3.5 sy,  0.0 ni, 94.2 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st 
+MiB Mem :   3919.4 total,   1092.4 free,   1053.1 used,   2078.3 buff/cache     
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   2866.3 avail Mem 
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+     64 root      20   0       0      0      0 I   4.8   0.0   1:25.49 kdamond+
+   4979 root      20   0   11.2g  81128  26780 S   4.8   2.0   2:14.47 etcd
+  68882 devops    20   0    8620   5980   3808 R   4.8   0.1   0:00.01 top
+      1 root      20   0   27532  17608  12332 S   0.0   0.4   0:07.19 systemd
+      2 root      20   0       0      0      0 S   0.0   0.0   0:00.01 kthreadd
+      3 root      20   0       0      0      0 S   0.0   0.0   0:00.00 pool_wo+
+      4 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      5 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      6 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      7 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      8 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+     10 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+     13 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+     14 root      20   0       0      0      0 S   0.0   0.0   0:00.26 ksoftir+
+     15 root      20   0       0      0      0 I   0.0   0.0   0:02.83 rcu_pre+
+     16 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_exp+
+     17 root      20   0       0      0      0 S   0.0   0.0   0:00.01 rcu_exp+
+     18 root      rt   0       0      0      0 S   0.0   0.0   0:00.03 migrati+
+[exit=0 at 2026-11-23T11:23:41Z]
+
+##### 2026-11-23T11:23:41Z  host=c3-k8s-master  processes by CPU and memory
+$ bash -c ps -eo pid,user,%cpu,%mem,rss,comm --sort=-%cpu | head -n 15
+    PID USER     %CPU %MEM   RSS COMMAND
+  68888 devops    100  0.1  4684 ps
+  68815 devops   15.2  0.3 12080 systemd
+  58770 root      3.1  7.1 287108 kube-apiserver
+   5111 root      1.9  2.6 105220 kubelet
+   4979 root      1.6  2.0 81128 etcd
+  65109 root      1.3  3.2 129592 kube-controller
+     64 root      0.8  0.0     0 kdamond.0
+  65174 root      0.8  1.7 72232 kube-scheduler
+   7752 root      0.5  1.6 66724 containerd
+   7001 65532     0.1  1.4 58564 coredns
+   6694 root      0.1  1.2 51120 flanneld
+   7002 65532     0.1  1.4 59236 coredns
+      1 root      0.0  0.4 17608 systemd
+     55 root      0.0  0.0     0 khugepaged
+[exit=0 at 2026-11-23T11:23:41Z]
+
+##### 2026-11-23T11:23:41Z  host=c3-k8s-master  df -h (disk space per partition)
+$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1        30G  2.6G   26G  10% /
+devtmpfs        1.9G     0  1.9G   0% /dev
+tmpfs           2.0G     0  2.0G   0% /dev/shm
+tmpfs           784M  1.9M  783M   1% /run
+none            1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+tmpfs           2.0G   32K  2.0G   1% /tmp
+none            1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
+/dev/sda15      124M  310K  124M   1% /boot/efi
+none            1.0M     0  1.0M   0% /run/credentials/systemd-networkd.service
+none            1.0M     0  1.0M   0% /run/credentials/getty@tty1.service
+none            1.0M     0  1.0M   0% /run/credentials/serial-getty@ttyS0.service
+tmpfs           392M  4.0K  392M   1% /run/user/0
+tmpfs           392M  4.0K  392M   1% /run/user/1001
+[exit=0 at 2026-11-23T11:23:41Z]
+
+##### 2026-11-23T11:23:41Z  host=c3-k8s-master  free -h (memory)
+$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:           3.8Gi       1.0Gi       1.1Gi       1.9Mi       2.0Gi       2.8Gi
+Swap:             0B          0B          0B
+[exit=0 at 2026-11-23T11:23:41Z]
+
+##### 2026-11-23T11:23:41Z  host=c3-k8s-master  vmstat 1 3 (virtual memory and disk I/O)
+$ vmstat 1 3
+procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st gu
+ 0  0      0 1118668 66672 2061480   0    0    29   266 3211   12  2  1 87  9  0  0
+ 0  0      0 1118428 66672 2061480   0    0     0    28 3766 6031  1  1 97  0  0  0
+ 0  0      0 1118188 66680 2061484   0    0     0    60 3814 6065  2  2 97  0  0  0
+[exit=0 at 2026-11-23T11:23:43Z]
+
+##### 2026-11-23T11:23:43Z  host=c3-k8s-master  listening sockets (ss -tulpn)
+$ sudo -n ss -tulpn 2>/dev/null || ss -tuln
+Netid State  Recv-Q Send-Q  Local Address:Port  Peer Address:PortProcess
+udp   UNCONN 0      0          127.0.0.54:53         0.0.0.0:*    users:(("systemd-resolve",pid=462,fd=22))
+udp   UNCONN 0      0       127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=462,fd=20))
+udp   UNCONN 0      0             0.0.0.0:8472       0.0.0.0:*   
+udp   UNCONN 0      0             0.0.0.0:5355       0.0.0.0:*    users:(("systemd-resolve",pid=462,fd=13))
+udp   UNCONN 0      0                [::]:5355          [::]:*    users:(("systemd-resolve",pid=462,fd=15))
+tcp   LISTEN 0      4096        127.0.0.1:10259      0.0.0.0:*    users:(("kube-scheduler",pid=65174,fd=3))
+tcp   LISTEN 0      4096        127.0.0.1:10257      0.0.0.0:*    users:(("kube-controller",pid=65109,fd=3))
+tcp   LISTEN 0      4096        127.0.0.1:10249      0.0.0.0:*    users:(("kube-proxy",pid=5223,fd=13))
+tcp   LISTEN 0      4096        127.0.0.1:10248      0.0.0.0:*    users:(("kubelet",pid=5111,fd=18))
+tcp   LISTEN 0      4096        127.0.0.1:45089      0.0.0.0:*    users:(("containerd",pid=7752,fd=87))
+tcp   LISTEN 0      4096       127.0.0.54:53         0.0.0.0:*    users:(("systemd-resolve",pid=462,fd=23))
+tcp   LISTEN 0      4096        127.0.0.1:2381       0.0.0.0:*    users:(("etcd",pid=4979,fd=13))
+tcp   LISTEN 0      4096        127.0.0.1:2379       0.0.0.0:*    users:(("etcd",pid=4979,fd=8))
+tcp   LISTEN 0      128           0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=15108,fd=6))
+tcp   LISTEN 0      4096   192.168.160.17:2379       0.0.0.0:*    users:(("etcd",pid=4979,fd=9))
+tcp   LISTEN 0      4096   192.168.160.17:2380       0.0.0.0:*    users:(("etcd",pid=4979,fd=7))
+tcp   LISTEN 0      4096          0.0.0.0:5355       0.0.0.0:*    users:(("systemd-resolve",pid=462,fd=14))
+tcp   LISTEN 0      4096    127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=462,fd=21))
+tcp   LISTEN 0      4096                *:10250            *:*    users:(("kubelet",pid=5111,fd=24))
+tcp   LISTEN 0      4096                *:10256            *:*    users:(("kube-proxy",pid=5223,fd=11))
+tcp   LISTEN 0      128              [::]:22            [::]:*    users:(("sshd",pid=15108,fd=7))
+tcp   LISTEN 0      4096                *:6443             *:*    users:(("kube-apiserver",pid=58770,fd=3))
+tcp   LISTEN 0      4096             [::]:5355          [::]:*    users:(("systemd-resolve",pid=462,fd=16))
+[exit=0 at 2026-11-23T11:23:43Z]
+
+##### 2026-11-23T11:23:43Z  host=c3-k8s-master  network addresses
+$ ip -4 -brief addr
+lo               UNKNOWN        127.0.0.1/8 
+eth0             UP             192.168.160.17/24 metric 100 
+flannel.1        UNKNOWN        10.244.0.0/32 
+cni0             UP             10.244.0.1/24 
+[exit=0 at 2026-11-23T11:23:43Z]
+
+##### 2026-11-23T11:23:43Z  host=c3-k8s-master  storage pressure (PSI: time waiting for I/O and memory)
+$ bash -c cat /proc/pressure/io /proc/pressure/memory 2>/dev/null
+some avg10=0.03 avg60=8.48 avg300=15.05 total=1793279827
+full avg10=0.03 avg60=8.27 avg300=14.64 total=1744277173
+some avg10=0.00 avg60=0.00 avg300=0.00 total=206
+full avg10=0.00 avg60=0.00 avg300=0.00 total=167
+[exit=0 at 2026-11-23T11:23:43Z]
+
+##### 2026-11-23T11:23:43Z  host=c3-k8s-master  etcd slow disk warnings, last 30 minutes (control plane only)
+$ id=$(sudo -n crictl ps --name etcd -q 2>/dev/null | head -1); [ -n "$id" ] && sudo -n crictl logs --tail 5000 "$id" 2>&1 | grep -c "slow fdatasync" | sed "s/^/slow_fdatasync_last_5000_log_lines=/"; true
+slow_fdatasync_last_5000_log_lines=60
+[exit=0 at 2026-11-23T11:23:43Z]
+
+##### 2026-11-23T11:23:44Z  host=c3-k8s-master  kubernetes nodes, status and readiness
+$ kubectl get nodes -o wide
+NAME              STATUS   ROLES           AGE    VERSION   INTERNAL-IP      EXTERNAL-IP   OS-IMAGE                 KERNEL-VERSION           CONTAINER-RUNTIME
+c3-k8s-master     Ready    control-plane   139m   v1.32.5   192.168.160.17   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown
+c3-k8s-worker-1   Ready    <none>          137m   v1.32.5   192.168.160.33   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown
+c3-k8s-worker-2   Ready    <none>          137m   v1.32.5   192.168.160.98   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown
+[exit=0 at 2026-11-23T11:23:44Z]
+
+##### 2026-11-23T11:23:44Z  host=c3-k8s-master  kubernetes pods in all namespaces (status, restarts, placement)
+$ kubectl get pods -A -o wide
+NAMESPACE       NAME                                    READY   STATUS    RESTARTS       AGE    IP               NODE              NOMINATED NODE   READINESS GATES
+kube-flannel    kube-flannel-ds-5nt56                   1/1     Running   0              137m   192.168.160.98   c3-k8s-worker-2   <none>           <none>
+kube-flannel    kube-flannel-ds-df6zk                   1/1     Running   0              137m   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-flannel    kube-flannel-ds-l9ghh                   1/1     Running   0              137m   192.168.160.33   c3-k8s-worker-1   <none>           <none>
+kube-system     coredns-668d6bf9bc-skpxg                1/1     Running   0              138m   10.244.0.2       c3-k8s-master     <none>           <none>
+kube-system     coredns-668d6bf9bc-z6lbp                1/1     Running   0              138m   10.244.0.3       c3-k8s-master     <none>           <none>
+kube-system     etcd-c3-k8s-master                      1/1     Running   0              139m   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-system     kube-apiserver-c3-k8s-master            1/1     Running   5 (23m ago)    139m   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-system     kube-controller-manager-c3-k8s-master   1/1     Running   10 (19m ago)   139m   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-system     kube-proxy-hrkx6                        1/1     Running   0              137m   192.168.160.98   c3-k8s-worker-2   <none>           <none>
+kube-system     kube-proxy-k8nl2                        1/1     Running   0              138m   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-system     kube-proxy-mbsk4                        1/1     Running   0              137m   192.168.160.33   c3-k8s-worker-1   <none>           <none>
+kube-system     kube-scheduler-c3-k8s-master            1/1     Running   10 (19m ago)   139m   192.168.160.17   c3-k8s-master     <none>           <none>
+kube-system     metrics-server-6f9bf66-rx4wd            1/1     Running   0              76m    10.244.1.24      c3-k8s-worker-2   <none>           <none>
+qt-spring-app   api-7d4c648b4f-s69br                    1/1     Running   0              91m    10.244.1.6       c3-k8s-worker-2   <none>           <none>
+qt-spring-app   api-7d4c648b4f-w5lcv                    1/1     Running   0              89m    10.244.2.7       c3-k8s-worker-1   <none>           <none>
+qt-spring-app   frontend-867884df48-8s8hr               1/1     Running   0              94m    10.244.1.4       c3-k8s-worker-2   <none>           <none>
+qt-spring-app   frontend-867884df48-k9v9h               1/1     Running   0              94m    10.244.2.3       c3-k8s-worker-1   <none>           <none>
+qt-spring-app   gateway-86cbfcb587-cpls7                1/1     Running   0              94m    10.244.1.5       c3-k8s-worker-2   <none>           <none>
+qt-spring-app   gateway-86cbfcb587-vdqcw                1/1     Running   0              94m    10.244.2.4       c3-k8s-worker-1   <none>           <none>
+qt-spring-app   mongodb-0                               1/1     Running   0              94m    10.244.2.5       c3-k8s-worker-1   <none>           <none>
+qt-spring-app   valkey-585589ff47-srck9                 1/1     Running   0              84s    10.244.1.31      c3-k8s-worker-2   <none>           <none>
+[exit=0 at 2026-11-23T11:23:44Z]
+
+##### 2026-11-23T11:23:44Z  host=c3-k8s-master  kubernetes node resource use (metrics-server)
+$ kubectl top nodes
+NAME              CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+c3-k8s-master     106m         2%       774Mi           20%         
+c3-k8s-worker-1   164m         4%       524Mi           13%         
+c3-k8s-worker-2   34m          0%       460Mi           12%         
+[exit=0 at 2026-11-23T11:23:44Z]
+
+##### 2026-11-23T11:23:44Z  host=c3-k8s-master  kubernetes pod resource use (metrics-server)
+$ kubectl top pods -A
+NAMESPACE       NAME                                    CPU(cores)   MEMORY(bytes)   
+kube-flannel    kube-flannel-ds-5nt56                   9m           16Mi            
+kube-flannel    kube-flannel-ds-df6zk                   10m          16Mi            
+kube-flannel    kube-flannel-ds-l9ghh                   9m           16Mi            
+kube-system     coredns-668d6bf9bc-skpxg                2m           19Mi            
+kube-system     coredns-668d6bf9bc-z6lbp                2m           18Mi            
+kube-system     etcd-c3-k8s-master                      17m          55Mi            
+kube-system     kube-apiserver-c3-k8s-master            29m          208Mi           
+kube-system     kube-controller-manager-c3-k8s-master   12m          62Mi            
+kube-system     kube-proxy-hrkx6                        1m           17Mi            
+kube-system     kube-proxy-k8nl2                        1m           17Mi            
+kube-system     kube-proxy-mbsk4                        1m           16Mi            
+kube-system     kube-scheduler-c3-k8s-master            7m           24Mi            
+kube-system     metrics-server-6f9bf66-rx4wd            3m           26Mi            
+qt-spring-app   api-7d4c648b4f-s69br                    1m           16Mi            
+qt-spring-app   api-7d4c648b4f-w5lcv                    2m           17Mi            
+qt-spring-app   frontend-867884df48-8s8hr               1m           4Mi             
+qt-spring-app   frontend-867884df48-k9v9h               1m           4Mi             
+qt-spring-app   gateway-86cbfcb587-cpls7                1m           4Mi             
+qt-spring-app   gateway-86cbfcb587-vdqcw                1m           4Mi             
+qt-spring-app   mongodb-0                               105m         121Mi           
+qt-spring-app   valkey-585589ff47-srck9                 3m           8Mi             
+[exit=0 at 2026-11-23T11:23:44Z]
+
+##### 2026-11-23T11:23:44Z  host=c3-k8s-master  application services in qt-spring-app
+$ kubectl -n qt-spring-app get svc
+NAME       TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+api        ClusterIP   10.102.197.195   <none>        8080/TCP       94m
+frontend   ClusterIP   10.102.167.59    <none>        8080/TCP       94m
+gateway    NodePort    10.104.176.69    <none>        80:30080/TCP   94m
+mongodb    ClusterIP   10.104.50.191    <none>        27017/TCP      94m
+valkey     ClusterIP   10.98.59.92      <none>        6379/TCP       94m
+[exit=0 at 2026-11-23T11:23:44Z]
+
+##### 2026-11-23T11:23:44Z  host=c3-k8s-master  application pods in qt-spring-app
+$ kubectl -n qt-spring-app get pods -o wide
+NAME                        READY   STATUS    RESTARTS   AGE   IP            NODE              NOMINATED NODE   READINESS GATES
+api-7d4c648b4f-s69br        1/1     Running   0          91m   10.244.1.6    c3-k8s-worker-2   <none>           <none>
+api-7d4c648b4f-w5lcv        1/1     Running   0          89m   10.244.2.7    c3-k8s-worker-1   <none>           <none>
+frontend-867884df48-8s8hr   1/1     Running   0          94m   10.244.1.4    c3-k8s-worker-2   <none>           <none>
+frontend-867884df48-k9v9h   1/1     Running   0          94m   10.244.2.3    c3-k8s-worker-1   <none>           <none>
+gateway-86cbfcb587-cpls7    1/1     Running   0          94m   10.244.1.5    c3-k8s-worker-2   <none>           <none>
+gateway-86cbfcb587-vdqcw    1/1     Running   0          94m   10.244.2.4    c3-k8s-worker-1   <none>           <none>
+mongodb-0                   1/1     Running   0          94m   10.244.2.5    c3-k8s-worker-1   <none>           <none>
+valkey-585589ff47-srck9     1/1     Running   0          84s   10.244.1.31   c3-k8s-worker-2   <none>           <none>
+[exit=0 at 2026-11-23T11:23:44Z]
+
+##### 2026-11-23T11:23:44Z  host=c3-k8s-master  application health through NodePort 30080
+$ curl -s -m 10 -w "  HTTP %{http_code}\n" http://127.0.0.1:30080/api/health; curl -s -o /dev/null -m 10 -w "frontend / HTTP %{http_code}\n" http://127.0.0.1:30080/
+{"status":"ok","database":"up","cache":"up"}  HTTP 200
+frontend / HTTP 200
+[exit=0 at 2026-11-23T11:23:44Z]
+
+# end of collect.sh on c3-k8s-master at 2026-11-23T11:23:44Z

@@ -36,19 +36,21 @@ spec:
             - name: REDISCLI_AUTH
               valueFrom:
                 secretKeyRef: {name: app-secrets, key: VALKEY_PASSWORD}
+          # TCP probes, not exec: an exec probe starts a shell and valkey-cli inside the container, and under disk
+          # stalls that exceeded its 3 s timeout and kept the pod NotReady for about 9 minutes (D-K8S-19).
           readinessProbe:
-            exec:
-              command: ["sh", "-c", "valkey-cli ping | grep -q PONG"]
+            tcpSocket:
+              port: valkey
             initialDelaySeconds: 5
             periodSeconds: 10
-            timeoutSeconds: 3
+            timeoutSeconds: 5
             failureThreshold: 3
           livenessProbe:
-            exec:
-              command: ["sh", "-c", "valkey-cli ping | grep -q PONG"]
+            tcpSocket:
+              port: valkey
             initialDelaySeconds: 15
             periodSeconds: 20
-            timeoutSeconds: 3
+            timeoutSeconds: 5
             failureThreshold: 3
           resources:
             requests: {cpu: 50m, memory: 64Mi}

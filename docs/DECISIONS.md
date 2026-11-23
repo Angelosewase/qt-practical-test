@@ -355,3 +355,45 @@ The brief requires screenshots of the real VMs, the real browser and the real ma
 ## D-MON-5. Final verification and IP check
 
 `scripts/verify.sh` ran against both URLs (34 of 34 each), saved in `monitoring/final-verify.txt`. For IPs, `make tf-output` reads only the Terraform state, so it cannot show a DHCP change by itself. The check that matters is the address each VM reports for itself. Those match the state exactly (table in WORKLOG), so no IP has changed. `make tf-apply` was not run.
+
+## D-K8S-19. Valkey probes are TCP, not exec
+
+The Valkey readiness probe ran `sh -c 'valkey-cli ping | grep -q PONG'` with a 3-second timeout. An exec probe starts a shell and a client inside the container, and during the disk stalls (D-STOR-1) that exceeded 3 seconds. The pod stayed NotReady for about 10 minutes after the scale-up at 10:52 UTC, and the rollout timed out. Both probes are now `tcpSocket` on port 6379 (timeout 5 s). A new ReplicaSet came up Ready in 12 seconds. Valkey runs with the Recreate strategy, so the change caused a short cache outage, which the cache design tolerates. The MongoDB probes were left alone: changing them restarts the database pod, and no MongoDB probe failure was seen.
+
+## D-DEMO-1. The demo verdict has strict rules
+
+`scripts/resilience-demo.sh` retries every kubectl call up to five times, logs each error, and counts it. Before each phase it waits for `/readyz` to answer `ok` three times in a row (up to 240 s), and it logs a clear `TIMEOUT` line for anything it gives up on. On every exit path (success, failure, Ctrl-C) it restores Valkey to 1 and the API to 2, retrying each step. The verdict is `CLEAN` only when there are zero kubectl errors, zero failed phases, zero failed requests, and the final state is correct. Otherwise it exits 1 and says why.
+
+## D-STOR-1. Root cause: the Proxmox host's storage and memory are overcommitted
+
+Evidence (all from inside the VMs, or read-only from the Proxmox API):
+
+- etcd on the control plane logged 177 `slow fdatasync` warnings (over 1 s each), 13 of them over 10 s, the worst 102.3 s (10:57:35 UTC). The first one was at 09:06, when the cluster was being built. Each `fdatasync` is needed before etcd can commit a write, so a stall blocks every API request.
+- During the stalls, the leader-election leases of kube-controller-manager and kube-scheduler could not be renewed. Both exited, and kubelet restarted them 10 times each (CrashLoopBackOff). The API server restarted 5 times.
+- The guest is not short of resources: 3.9 GB RAM with 2.9 GB free, no swap, no OOM kill, CPU about 90% idle, load 2.0 at the worst. The kernel log has no block-device errors (only boot messages).
+- The master itself wrote only 30 to 86 KB/s during the stalls (Proxmox RRD for VM 120). The stalls are the storage queue backing up, not this VM's own write load.
+- The same stalls appear on a worker, under synthetic load (see D-STOR-2): fsync maximum 22 to 30 s with and without `discard`, against 0.9 ms when idle.
+- Host `server4` (Proxmox API, read-only): memory 112.9 of 125.8 GiB used, swap 7.95 of 8.0 GiB used, host I/O wait up to 33% (10:59 UTC) and 28% (11:04 UTC), load average up to 64. The node runs 48 VMs, including other candidates' VMs in pools `exam-c6` and `exam-c7`. The storage is shared, so the exam VMs wait behind other workloads. Which VM causes the contention cannot be seen from the pool we have access to.
+
+## D-STOR-2. Things tested and ruled out, or only partly helpful
+
+- **Online discard** (`discard` in fstab and `discard=on` in Terraform). Tested on a worker: remounting without it did not remove the stalls. The count of fsyncs over 100 ms was 96 and 165 without discard, against 48 with it. Not the cause, and not changed.
+- **Smaller dirty-page limits** (`vm.dirty_bytes` 64 MB, `vm.dirty_background_bytes` 16 MB). Lowered the worst stall from 30 s to 4 s, but raised the number of stalls over 100 ms from 29 to 297 and worsened p99 (186 to 337 ms). A trade-off, not a fix. Not applied.
+- **More RAM for the VM.** The guest has 2.9 GB free, so the VM does not need more. Adding RAM would increase the host's overcommit, the very thing causing the stalls.
+- **Exec probes in the application** (Valkey). Their timeouts made the stalls look worse. Fixed (D-K8S-19), but this only removed an amplifier.
+
+## D-STOR-3. Proposals for the exam administrator (NOT applied, per the instruction not to change Terraform)
+
+These are ordered by how much they should help. None was applied.
+
+1. **Move the four c3 VMs to a less loaded Proxmox node, or to dedicated storage.** This is the only change that addresses the root cause. It needs the exam administrator, because the pool `exam-c5` gives no access to the host. Evidence to show: D-STOR-1.
+2. **Master disk cache mode `writeback`** (Terraform: `cache = "writeback"` on `scsi0` of `c3-k8s-master`). The host's page cache absorbs fsync and would hide much of the stall. Risk: if the host crashes, the most recent etcd writes could be lost. Acceptable for a disposable exam cluster. Not verified in this environment. It is a disk setting change, so it needs a Terraform plan and may cause an in-place update of the VM.
+3. **Separate virtual disk for `/var/lib/etcd`.** Keeps etcd's fsyncs apart from container image and log writes on the root disk. It does not remove host-side contention, so it helps less than item 1 or 2.
+4. **Do not add RAM to the VMs** until the host is less overcommitted. The guest needs about 1 GB of its 4 GB.
+5. **`discard = "off"`** on the disk: no measurable benefit in testing, so it is not recommended as a fix.
+
+If the storage cannot be changed, a guest-side mitigation exists but was not applied: raise the leader-election lease and renew durations of kube-controller-manager and kube-scheduler (static pod manifests, through Ansible) so that brief etcd stalls do not kill them. That reduces the crash-loops but does not reduce the stalls, and it slows failover. Decision for the user.
+
+## D-STOR-4. The monitoring snapshot now records storage pressure
+
+`scripts/collect.sh` records `/proc/pressure/io` and `/proc/pressure/memory` on every VM, and on the control plane counts the etcd `slow fdatasync` warnings in the last 5,000 log lines. Future incidents can be traced from `monitoring/<host>/collect-*.txt` without re-deriving the timeline.

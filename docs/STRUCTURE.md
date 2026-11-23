@@ -48,7 +48,9 @@ qt-practical-test/
 ├── monitoring/            Evidence and screenshots (Task 5)
 │   ├── SCREENSHOTS.md     Checklist of the 37 captures, filenames and commands
 │   ├── final-verify.txt   verify.sh on both URLs
-│   ├── resilience-evidence.txt, task1..4-evidence.txt
+│   ├── resilience-evidence.txt (laptop, clean), resilience-master-run.txt (control plane, clean),
+│   ├── resilience-attempts/   Runs that were not clean, kept for the record
+│   ├── task1..4-evidence.txt
 │   └── <host>/collect-*.txt   Timestamped snapshots per VM (from make collect-monitoring)
 ├── scripts/
 │   ├── pre-commit         Git hook: blocks commits that contain a secret value
