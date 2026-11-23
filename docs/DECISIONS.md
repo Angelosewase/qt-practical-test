@@ -311,3 +311,27 @@ The compose file keeps its build sections for local work. On the VM, the Ansible
 ## D-DH-10. The Compose stack is deployed by Ansible, idempotently
 
 The `docker_host` and `compose_app` roles run in the full playbook. A second full run reported `changed=0` on every host. The `compose up --wait` task reports a change only when a container was started or recreated, and the `daemon.json` change restarts docker only when it actually changes.
+
+## D-K8S-15. The MongoDB node label is set by Ansible
+
+The PV's nodeAffinity needs `projecthub/storage=mongo` on one worker. Setting it by hand would break "no manual steps", so the role `k8s_node_labels` labels `k8s_mongo_node` (c3-k8s-worker-1, in `group_vars/all.yml`) and only when the label is missing. Verified: the playbook changed only that label. The PV is Bound, and `mongodb-0` runs on the node.
+
+## D-K8S-16. API init container waits for MongoDB
+
+The first deploy showed the API exiting once: the MongoDB StatefulSet started later than the API's 60-second connect timeout, and the Go API exits when that expires (by design). An init container (`wait-for-mongodb`, pinned alpine 3.21.10) now waits for `mongodb:27017`. The API still retries its own connection. The rollout after this change showed 0 restarts.
+
+## D-K8S-17. Kubeconfig on the laptop
+
+`.private/kubeconfig` is a copy of the control plane's devops kubeconfig (server `https://192.168.160.17:6443`, which is already the right address, so no rewrite was needed). It is gitignored, mode 0600, and never printed. Every Make target and script uses an explicit `KUBECONFIG`, so the stale default context on the laptop is never used.
+
+## D-K8S-18. The resilience proof is a script, not a one-off
+
+`scripts/resilience-demo.sh` runs the same sequence the evidence shows and timestamps every line. It takes its settings from the environment (node IP, NodePort, normal replica count), uses only the seeded test account, and prints no secret. It runs on the laptop or on the control plane (verified on both). The request loop is cleaned up on exit, and the trap signals only a real loop PID. An earlier version signalled PID 0, which signalled the whole process group, including the caller.
+
+## D-RES-1. Why the cache has no persistence
+
+Valkey caches only what MongoDB can rebuild, with TTLs of one to two minutes. Persistence would store disposable data, so the cache runs without `--save` and without `appendonly`, and has no PersistentVolume. The database has the only PersistentVolume. The application degrades gracefully: with the cache down, `/api/health` reports `cache: "down"` with HTTP 200, and reads go to MongoDB.
+
+## D-RES-2. Measured request gap in the loop
+
+The loop sleeps 0.2 s after each request. Each request takes a few tens of milliseconds, so the measured average gap is about 0.26 s. That is reported as measured, not as exactly 0.2 s.

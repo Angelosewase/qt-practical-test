@@ -18,7 +18,7 @@ Docker Compose on one VM, and Kubernetes on a three-node kubeadm cluster.
 | App analysis and move into `app/` | Done |
 | Task 2: Docker images and Compose (`docker/`) | **Deployed on c3-docker-host** (http://192.168.160.11). Images pushed to Docker Hub as `angelsewase/projecthub-api:1.0.0` and `angelsewase/projecthub-frontend:1.0.0`. 34 of 34 functional checks pass on the VM |
 | Task 3: Ansible Kubernetes cluster (`ansible/`) | Not started (needs the VMs) |
-| Task 4: Kubernetes manifests (`k8s/`) | Validated, and deployed and tested on a **local kind cluster** (34 of 34). Not yet on the exam cluster |
+| Task 4: Kubernetes deployment (`k8s/`) | **Deployed on the exam cluster**. NodePort http://192.168.160.17:30080 (also .33 and .98). `verify.sh` 34 of 34. Resilience proof: 174 requests, 0 failed |
 | Task 5: Monitoring (`monitoring/`) | Not started |
 
 ## Architecture
@@ -179,7 +179,21 @@ make k8s-status                              # pods, services, volume claim
 make k8s-verify K8S_URL=http://<node-ip>:30080
 ```
 
-Access: `http://<any-node-ip>:30080`. Kubernetes NodePort is reachable on every node.
+**Deployed on the exam cluster.** Access: http://192.168.160.17:30080 (control plane), http://192.168.160.33:30080 and
+http://192.168.160.98:30080 (workers). The NodePort answers on every node.
+
+Exam cluster run (kubeconfig copied from the control plane to `.private/kubeconfig`, mode 0600, gitignored):
+
+```bash
+export KUBECONFIG=$PWD/.private/kubeconfig
+make k8s-validate                 # dry-runs against the cluster, plus offline checks
+make k8s-deploy                   # secrets from docker/.env, then apply and wait for rollouts
+make k8s-status                   # pods, services, PVC
+make k8s-verify K8S_URL=http://192.168.160.17:30080
+```
+
+The MongoDB volume is on `c3-k8s-worker-1`. The node is labelled `projecthub/storage=mongo` by the Ansible role
+`k8s_node_labels`, so no manual step is needed.
 
 Validation without a cluster is limited: `kubectl apply --dry-run=client` needs a reachable API server in
 kubectl 1.37 (for discovery). `k8s-validate` therefore runs offline checks first (kubeconform in strict mode
@@ -213,6 +227,36 @@ Test accounts (created on the first start of an empty database, `SEED_ENABLED=tr
 | member | `member@qt.rw` | `Member@123` |
 
 The app has no diary entries and no search. The "create and search" requirement is covered by create and list.
+
+## Kubernetes resilience proof
+
+Run on the exam cluster. Full output with timestamps on every line: [monitoring/resilience-evidence.txt](monitoring/resilience-evidence.txt).
+Re-run it live from the laptop or the control plane:
+
+```bash
+KUBECONFIG=.private/kubeconfig scripts/resilience-demo.sh | tee monitoring/resilience-evidence.txt
+```
+
+| Step | Key output | What it proves |
+|---|---|---|
+| a. Before | `api` 2/2 Ready, `valkey` 1/1, `mongodb-0` on `c3-k8s-worker-1`. Health `{"status":"ok","database":"up","cache":"up"}` | Starting point: every pod is Ready and the cache is up |
+| b. Scale API to 3 | `3 of 3 pods Ready for app.kubernetes.io/name=api` | Replicas are created and become Ready before taking traffic |
+| c. Delete one API pod during the loop | Deleted pod goes `Completed`; replacement goes `Init:0/1`, then `Running 0/1`, then `1/1`. Loop: 61 requests in this window, **0 failed** | A pod can disappear and the service keeps answering: the Service routes around it and the readiness gate protects the replacement |
+| d. Valkey to 0 | `"cache":"down"` on every sample, login as `manager@qt.rw` OK, list projects `HTTP 200, 1 project(s)`. Valkey back: `"cache":"up"` | The cache is optional: losing it degrades speed, not correctness |
+| e. API back to 2 | `2 of 2 pods Ready` | The deployment returns to its normal size |
+| Loop summary | `requests sent: 174   non-200 or failed: 0` | Across all phases, no request failed |
+
+Notes on the evidence: the request loop asks for `/api/health` every 0.2 s through the NodePort. Each request
+takes some time itself, so the average gap was about 0.26 s. The `Completed` status during scale-down is the
+pod shutting down gracefully, not a crash. The API exits cleanly on SIGTERM.
+
+### Why Valkey needs no persistent storage
+
+Valkey holds only data the application can rebuild from MongoDB: dashboard figures and short-lived user lookups,
+each with a TTL of one to two minutes. Losing it means the next request reads MongoDB, which is slower but
+correct. So the cache runs with persistence turned off (`--save ''`, `--appendonly no`) and has no PersistentVolume.
+Adding one would store data that is always disposable, and it would add a volume to recover in the case that
+matters least. The database, which is the source of truth, has the PersistentVolume.
 
 ## Resilience and failure behaviour (tested locally)
 

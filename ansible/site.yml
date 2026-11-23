@@ -27,6 +27,11 @@
   roles:
     - k8s_worker
 
+- name: Label the node that hosts the MongoDB volume
+  hosts: k8s_master
+  roles:
+    - k8s_node_labels
+
 - name: Verify the cluster
   hosts: k8s_master
   roles:

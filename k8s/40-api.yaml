@@ -23,6 +23,21 @@ spec:
         app.kubernetes.io/name: api
     spec:
       automountServiceAccountToken: false
+      # The API exits after MONGO_CONNECT_TIMEOUT if MongoDB is not up yet. This init container waits for the port,
+      # so a slow MongoDB start does not cause API restarts. The API still retries its own connection.
+      initContainers:
+        - name: wait-for-mongodb
+          image: alpine:3.21.10
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z mongodb 27017; do echo waiting for mongodb; sleep 2; done"]
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 32Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001

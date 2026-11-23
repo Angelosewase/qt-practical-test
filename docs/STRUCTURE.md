@@ -44,13 +44,14 @@ qt-practical-test/
 ├── app/                   ProjectHub source (the code behind the brief's "MyDiary"), copied without .git
 │   ├── backend/           Go 1.23 API (Gin, MongoDB, Valkey cache)
 │   └── frontend/          React 18 + Vite SPA
-├── monitoring/            Evidence: task1-evidence.txt, task3-evidence.txt, task2-evidence.txt; screenshots (Task 5)
+├── monitoring/            Evidence: task1, task2, task3, task4 and resilience-evidence.txt; screenshots (Task 5)
 ├── scripts/
 │   ├── pre-commit         Git hook: blocks commits that contain a secret value
 │   ├── secret-scan.sh     Scans staged changes, the working tree, or git history
 │   ├── gen-env.sh         Creates docker/.env with generated secrets
 │   ├── gen-inventory.sh   Writes ansible/inventory.ini from terraform output
 │   ├── verify.sh          End-to-end functional checks against any base URL
+│   ├── resilience-demo.sh Timestamped Kubernetes resilience sequence (re-runnable live)
 │   ├── k8s-render.sh      Fills image names and tags into k8s/ (stdout)
 │   ├── k8s-secrets.sh     Creates app-secrets from docker/.env (values never printed)
 │   ├── k8s-validate.sh    Render, policy, parity, schema, cluster dry-run

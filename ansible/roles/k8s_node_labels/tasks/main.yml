@@ -1,0 +1,31 @@
+---
+# The MongoDB PersistentVolume is pinned to a labelled node. Labelling is done here, not by hand, and only when missing.
+- name: Read the current storage label on the MongoDB node
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - get
+      - node
+      - "{{ k8s_mongo_node }}"
+      - -o
+      - "jsonpath={.metadata.labels.projecthub/storage}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  register: k8s_node_labels_current
+  changed_when: false
+
+- name: Label the MongoDB node (projecthub/storage=mongo)
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - label
+      - node
+      - "{{ k8s_mongo_node }}"
+      - projecthub/storage=mongo
+      - --overwrite
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  become: true
+  changed_when: true
+  when: k8s_node_labels_current.stdout != 'mongo'
