@@ -201,7 +201,7 @@ client ──HTTP :80──> nginx ──/──────> frontend:8080  (st
 | Register | `POST /api/auth/register` returns 201 with a token |
 | Login | `POST /api/auth/login` returns 200 with a token |
 | Create a diary entry | Create a project (manager) and a task inside it (member or manager) |
-| Search entries | **Not implemented.** Verify list endpoints instead: `GET /api/projects`, `GET /api/projects/:id/tasks`. Raise with the user: see DECISIONS.md D-APP-3. |
+| Search entries | **Not implemented.** Verify list endpoints instead: `GET /api/projects`, `GET /api/projects/:id/tasks`. See DECISIONS.md D-APP-3. |
 | Users only see their own data | A new member registered via the API gets `[]` from `GET /api/projects`. Requesting the seeded project by id returns 404. The task list of another user's project returns 404. |
 
 ## 8. Known gaps and risks in the code (not fixed: app code is out of scope)

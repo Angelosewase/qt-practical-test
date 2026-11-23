@@ -131,7 +131,7 @@ kube-scheduler and kube-controller-manager lost their leader-election leases at 
   E1123 13:26:14 server.go:298 "Leaderelection lost"
 After the install (13:27:55 UTC): /readyz ok; master I/O pressure avg10 0.17%; both components Running; all apps healthy.
 
-## 7. Gateway API (+5): not attempted
-Rule set for this bonus: only if the Helm install left the cluster calm. It did not (section 6): a moderate burst of
-API writes was enough to stall etcd and restart two control-plane components. Installing Gateway API CRDs and a
-controller writes more to the same etcd, so it was skipped to keep both required deployments safe.
+## 7. Gateway API (+5): not installed
+The install in section 6, a moderate burst of API writes, was enough to stall etcd and restart two control-plane
+components. A Gateway API controller and its CRDs add more writes to the same etcd, so it was not installed, to keep
+both required deployments stable.

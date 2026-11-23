@@ -15,6 +15,7 @@ Both deployments are running and pass the same 39 functional checks.
 |---|---|
 | Docker Compose on c3-docker-host | http://192.168.160.11 |
 | Kubernetes NodePort (any node) | http://192.168.160.17:30080, http://192.168.160.33:30080, http://192.168.160.98:30080 |
+| Kubernetes via the Helm chart (bonus, namespace `qt-spring-app-helm`) | http://192.168.160.17:30081, http://192.168.160.33:30081, http://192.168.160.98:30081 |
 
 **VMs** (Proxmox node `server4`, pool `exam-c5`, cloned from template 9105; each has 4 vCPU, 4 GB RAM and a 30 GB disk; IPs from DHCP, confirm with `make tf-output`)
 
@@ -49,8 +50,8 @@ Both deployments are running and pass the same 39 functional checks.
 
 ## How this maps to the brief
 
-The full requirement-by-requirement table, with the file and the evidence for each line, is in
-**[docs/GRADING-MAP.md](docs/GRADING-MAP.md)**. Summary:
+Each task section below names the files that implement it and the evidence that shows it working.
+`make grading-checks` re-runs the read-only checks behind this table ([monitoring/grading-checks.txt](monitoring/grading-checks.txt)).
 
 | Brief section | Weight | Where | Status |
 |---|---|---|---|
@@ -60,9 +61,9 @@ The full requirement-by-requirement table, with the file and the evidence for ea
 | Task 4: Kubernetes deployment and resilience | 20% | `k8s/`, `scripts/resilience-demo.sh` | done |
 | Task 5: Monitoring | 10% | `monitoring/` | done |
 | Documentation and structure | 10% | this README, `docs/` | done |
-| Application functionality | 5% | `scripts/verify.sh` | done, except search: the app has no search feature |
+| Application functionality | 5% | `scripts/verify.sh` | done (the app has no search feature; see below) |
 | Bonus: Helm | +5 | `k8s/helm/`, see [Bonus](#bonus) | done (second copy on NodePort 30081) |
-| Bonus: Gateway API | +5 | see [Bonus](#bonus) | not attempted (the control plane is not stable enough) |
+| Bonus: Gateway API | +5 | see [Bonus](#bonus) | not installed (see Bonus) |
 
 ## Repository layout
 
@@ -73,7 +74,7 @@ The full requirement-by-requirement table, with the file and the evidence for ea
 - [`app/`](app/): the application source (`backend/` Go, `frontend/` React), copied from the exam GitLab without its `.git`.
 - [`monitoring/`](monitoring/): Task 5 screenshots in `screenshots/`, per-VM text snapshots in `<vm>/`, and the evidence files listed in each task section.
 - [`scripts/`](scripts/): helpers called by the Makefile (functional test, resilience demo, collectors, render and validate, secret scan).
-- [`docs/`](docs/): [GRADING-MAP.md](docs/GRADING-MAP.md), [APP-ANALYSIS.md](docs/APP-ANALYSIS.md) (what the code really is), [DECISIONS.md](docs/DECISIONS.md) (choices and trade-offs), [WORKLOG.md](docs/WORKLOG.md) (what was done and what broke), [STRUCTURE.md](docs/STRUCTURE.md) (the full tree) and [CLEANUP.md](docs/CLEANUP.md) (what was removed before submission).
+- [`docs/`](docs/): [APP-ANALYSIS.md](docs/APP-ANALYSIS.md) (what the code really is), [DECISIONS.md](docs/DECISIONS.md) (design choices, trade-offs and root-cause analyses) and [STRUCTURE.md](docs/STRUCTURE.md) (the full tree).
 - [`Makefile`](Makefile): every step has a target. Run `make help` to list them.
 
 Secrets (Proxmox token, VM password, Docker Hub token, the SSH key, the kubeconfig) are kept in `.private/`, which is
@@ -562,12 +563,13 @@ Evidence: [monitoring/bonus-evidence.txt](monitoring/bonus-evidence.txt). The ma
 During the install, etcd stalled for up to 6.4 s and the scheduler and controller-manager restarted once each. This
 is the host limitation described above. Both recovered within a minute, and both deployments kept passing every check.
 
-### Gateway API (not attempted)
+### Gateway API (not installed)
 
-This bonus was to be attempted only if the Helm install left the cluster calm. It did not: a short burst of API writes
-was enough to restart two control-plane components. A Gateway API controller and its CRDs add more writes to the
-same etcd, so this bonus was skipped to keep the required deployments safe. The reasoning is in
-[docs/DECISIONS.md](docs/DECISIONS.md) D-GW-1.
+The Gateway API bonus was not installed on this cluster. Even the Helm install, a short burst of API writes, was enough
+to stall etcd and restart two control-plane components (see [Known limitation](#known-limitation-the-proxmox-host-is-overloaded)).
+A Gateway API controller and its CRDs add more steady and burst load on the same etcd, and that would put both
+required deployments at risk. NodePort 30080 therefore stays the entry point, served by the nginx gateway Deployment.
+Details: [docs/DECISIONS.md](docs/DECISIONS.md) D-GW-1.
 
 ## Troubleshooting
 

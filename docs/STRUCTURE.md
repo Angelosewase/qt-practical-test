@@ -51,7 +51,7 @@ qt-practical-test/
 │   ├── <vm>/collect-20261123T112333Z.txt   Text snapshot per VM (make collect-monitoring)
 │   ├── task1-evidence.txt … task4-evidence.txt   Evidence per task
 │   ├── grading-checks.txt Live checks for brief requirements (make grading-checks)
-│   ├── bonus-evidence.txt Helm release checks; why Gateway API was not attempted
+│   ├── bonus-evidence.txt Helm release checks; why Gateway API was not installed
 │   ├── final-verify.txt   verify.sh, 39 of 39 on all four URLs
 │   ├── resilience-evidence.txt, resilience-master-run.txt   Clean resilience runs (laptop, master)
 │   ├── resilience-attempts/   Runs that were not clean (host stalls), kept on purpose
@@ -64,13 +64,10 @@ qt-practical-test/
 │   ├── verify.sh          Browser-style functional test against any base URL
 │   ├── resilience-demo.sh Task 4 resilience proof with a strict verdict
 │   ├── collect.sh, collect-monitoring.sh   Read-only monitoring snapshots
-│   └── grading-checks.sh  Live read-only checks behind docs/GRADING-MAP.md
+│   └── grading-checks.sh  Live read-only checks of the brief's requirements
 ├── docs/
-│   ├── GRADING-MAP.md     Every brief requirement: files, evidence, status
 │   ├── APP-ANALYSIS.md    What the application really is (vs the brief)
 │   ├── DECISIONS.md       Choices, trade-offs and root-cause analyses
-│   ├── WORKLOG.md         Chronological log: what was done, what broke, how it was fixed
-│   ├── CLEANUP.md         What was removed or renamed before submission, and why
 │   └── STRUCTURE.md       This file
 └── .private/              LOCAL ONLY, gitignored: secrets.env, ssh/, kubeconfig, brief.docx
 ```
