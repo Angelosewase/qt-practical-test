@@ -1,0 +1,15 @@
+# Origin fix verification (generated 2026-11-23T12:49:35Z), after CORS_ORIGINS explicit list. Test account only.
+http://192.168.160.11 | origin=<none> | POST login 200 | 359 bytes | ACAO=-
+http://192.168.160.11 | origin=http://192.168.160.11 | POST login 200 | 359 bytes | ACAO=-
+http://192.168.160.11 | OPTIONS preflight | 404
+http://192.168.160.17:30080 | origin=<none> | POST login 200 | 359 bytes | ACAO=-
+http://192.168.160.17:30080 | origin=http://192.168.160.17:30080 | POST login 200 | 359 bytes | ACAO=http://192.168.160.17:30080
+http://192.168.160.17:30080 | OPTIONS preflight | 204
+http://192.168.160.33:30080 | origin=<none> | POST login 200 | 359 bytes | ACAO=-
+http://192.168.160.33:30080 | origin=http://192.168.160.33:30080 | POST login 200 | 359 bytes | ACAO=http://192.168.160.33:30080
+http://192.168.160.33:30080 | OPTIONS preflight | 204
+http://192.168.160.98:30080 | origin=<none> | POST login 200 | 359 bytes | ACAO=-
+http://192.168.160.98:30080 | origin=http://192.168.160.98:30080 | POST login 200 | 359 bytes | ACAO=http://192.168.160.98:30080
+http://192.168.160.98:30080 | OPTIONS preflight | 204
+# negative: origin not in the list must still be refused
+http://192.168.160.17:30080 | origin=http://evil.example | POST login 403

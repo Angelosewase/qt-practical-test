@@ -17,6 +17,8 @@ for v in DOCKERHUB_USER API_TAG FRONTEND_TAG; do
   fi
 done
 
+CONFIG_HASH="$(sha256sum "$ROOT/k8s/10-config.yaml" | cut -c1-16)"
+
 first=1
 for f in "$ROOT"/k8s/*.yaml; do
   [[ "$(basename "$f")" == secret.example.yaml ]] && continue
@@ -24,5 +26,5 @@ for f in "$ROOT"/k8s/*.yaml; do
   first=0
   sed -e "s#__DOCKERHUB_USER__#${DOCKERHUB_USER}#g" \
       -e "s#__API_TAG__#${API_TAG}#g" \
-      -e "s#__FRONTEND_TAG__#${FRONTEND_TAG}#g" "$f"
+      -e "s#__FRONTEND_TAG__#${FRONTEND_TAG}#g" -e "s#__CONFIG_HASH__#${CONFIG_HASH}#g" "$f"
 done

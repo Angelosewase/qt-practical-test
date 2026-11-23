@@ -1,6 +1,6 @@
 ---
-# metrics-server provides `kubectl top`. The manifest is vendored (metrics-server v0.9.1, unmodified).
-# kubeadm kubelets serve self-signed certificates, so the patch adds --kubelet-insecure-tls to the container args.
+# metrics-server provides `kubectl top`. The manifest is vendored with one documented change (see the file header):
+# --kubelet-insecure-tls, needed because kubeadm kubelets serve self-signed certificates.
 - name: Create the addons directory
   ansible.builtin.file:
     path: /etc/kubernetes/addons
@@ -12,29 +12,32 @@
 
 - name: Install the pinned metrics-server manifest (vendored in ansible/files)
   ansible.builtin.copy:
-    src: metrics-server-v0.9.1.yaml
+    src: metrics-server-v0.9.1-insecure-tls.yaml
     dest: /etc/kubernetes/addons/metrics-server.yaml
     owner: root
     group: root
     mode: "0644"
   become: true
 
-- name: Patch metrics-server for the kubeadm self-signed kubelet certificates
-  ansible.builtin.lineinfile:
-    path: /etc/kubernetes/addons/metrics-server.yaml
-    insertafter: "^        - --metric-resolution=15s$"
-    line: "        - --kubelet-insecure-tls"
-    state: present
+# kubectl apply prints "configured" when the stored last-applied text differs, even if the live object is identical
+# (verified: generation and resourceVersion unchanged). kubectl diff is the reliable test: exit 0 = no change, 1 = change.
+- name: Check whether the metrics-server manifest differs from the cluster
+  ansible.builtin.command: kubectl diff -f /etc/kubernetes/addons/metrics-server.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
   become: true
-  register: k8s_metrics_patch
+  register: k8s_metrics_diff
+  changed_when: false
+  failed_when: k8s_metrics_diff.rc > 1
 
-- name: Apply metrics-server
+- name: Apply metrics-server (only when kubectl diff shows a real change)
   ansible.builtin.command: kubectl apply -f /etc/kubernetes/addons/metrics-server.yaml
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   become: true
   register: k8s_metrics_apply
-  changed_when: "'created' in k8s_metrics_apply.stdout or 'configured' in k8s_metrics_apply.stdout"
+  when: k8s_metrics_diff.rc == 1
+  changed_when: true
 
 - name: Wait until metrics-server is available
   ansible.builtin.command: kubectl -n kube-system rollout status deploy/metrics-server --timeout=240s

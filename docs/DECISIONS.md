@@ -397,3 +397,40 @@ If the storage cannot be changed, a guest-side mitigation exists but was not app
 ## D-STOR-4. The monitoring snapshot now records storage pressure
 
 `scripts/collect.sh` records `/proc/pressure/io` and `/proc/pressure/memory` on every VM, and on the control plane counts the etcd `slow fdatasync` warnings in the last 5,000 log lines. Future incidents can be traced from `monitoring/<host>/collect-*.txt` without re-deriving the timeline.
+
+## D-CORS-1. Root cause of the 403 on login through the NodePort: an unlisted browser Origin, not the Host
+
+The browser's login POST carries `Origin: http://192.168.160.17:30080`. The API uses `gin-contrib/cors` v1.7.2 (`applyCors`). That library treats a request as same-origin only when `Origin == "http://" + Request.Host`, and it refuses any other origin that is not in the configured list, with a 403, for every method. The configured list was never set: neither deployment defined `CORS_ORIGINS`, so the code default `http://localhost:5173` applied.
+
+The two deployments differ in the Host the API receives. nginx's `$host` variable has no port, so the API sees `192.168.160.17` on the NodePort but `192.168.160.11` on Compose (port 80 is implied). Compose therefore passed the same-origin shortcut by accident. The NodePort failed on the port in its Origin. Controlled matrix (`monitoring/origin-bug/repro-matrix.txt`): an Origin with the port returns 403, the same origin without the port returns 200, and no Origin returns 200. `verify.sh` never failed because curl sends no Origin.
+
+Not a gateway bug and not a frontend bug: the page loaded, and the request reached the API. Application code was not changed, because the existing configuration mechanism is enough.
+
+## D-CORS-2. Fix: an explicit origin list in both deployments, no wildcard
+
+`CORS_ORIGINS` is set to exactly four origins: `http://192.168.160.11` (Compose), and `http://192.168.160.17:30080`, `http://192.168.160.33:30080`, `http://192.168.160.98:30080` (the NodePort on each node). Scheme, host and port must match what the browser sends. The check stays on: an unlisted origin is still refused, and this is now tested (`http://evil.example` returns 403 in `verify.sh`). Set in the Kubernetes ConfigMap `api-config` (`k8s/10-config.yaml`) and in the Compose file (`docker/docker-compose.yml`, with `docker/.env.example`). After the fix, the NodePort origins return 200 with `Access-Control-Allow-Origin` echoed, and the preflight returns 204.
+
+Compose: the same list is set explicitly. Its own origin still passes through the same-origin shortcut, so Compose behaviour is unchanged and the explicit entry only matters if the host name changes.
+
+## D-CORS-3. Config changes roll the pods
+
+A ConfigMap change does not restart a pod, so the API would have kept the old list. `scripts/k8s-render.sh` now puts `sha256(k8s/10-config.yaml)` into a `checksum/config` annotation on the API and gateway pod templates. A configuration change therefore changes the pod template and triggers a normal rolling update, with `maxUnavailable: 0`. Verified: the rollout created new API and gateway pods, and the new pods report the new `CORS_ORIGINS`.
+
+## D-CORS-4. No image rebuild
+
+The fault is in configuration only. Neither app image was rebuilt or re-tagged, so `angelsewase/projecthub-api:1.0.0` and `angelsewase/projecthub-frontend:1.0.0` on Docker Hub are unchanged.
+
+## D-VERIFY-1. verify.sh now tests what a browser does
+
+- Every API request sends a browser User-Agent and `Accept`. Every write also sends the page's `Origin` and `Referer`, as a browser does.
+- Page checks: `/`, `/login`, `/register`, `/dashboard`, and a deep route `/projects/123` must return 200 with `text/html`. A static script named in `index.html` must return 200 with `application/javascript` (the correct MIME type; I first wrote `text/javascript` and corrected the expectation).
+- Negative check: a login from an unlisted origin must return 403, so the origin rule is proven to be on.
+- Result: 39 of 39 on `http://192.168.160.11`, `http://192.168.160.17:30080`, `http://192.168.160.33:30080` and `http://192.168.160.98:30080` (`monitoring/origin-bug/verify-browser-after-fix.txt`).
+
+## D-VERIFY-2. The resilience demo checks the SPA route
+
+Phase d now requests `/login` with a browser User-Agent on each cache-down health sample, and a non-200 counts as a failed phase. The check is one extra request per sample. Confirmed in the run: `SPA /login: HTTP 200` on all three samples.
+
+## D-ANS-7. Metrics-server is idempotent (correction of an earlier role)
+
+The role `k8s_metrics` copied the unpatched manifest and then patched it with `lineinfile`, so every run changed the file and reapplied it. It now uses one vendored file that carries the single documented change (`--kubelet-insecure-tls`), so the copy is idempotent. `kubectl apply` also prints `configured` when only its stored last-applied text differs. Verified: `generation` and `resourceVersion` stayed the same, so nothing on the cluster changed. The role therefore gates the apply on `kubectl diff` (exit 0 = no change, 1 = change). Playbook runs after the fix report `changed=0` on every host.

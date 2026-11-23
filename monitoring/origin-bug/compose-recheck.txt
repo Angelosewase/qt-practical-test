@@ -1,0 +1,3 @@
+# Compose re-check after the Compose redeploy (generated 2026-11-23T12:58:41Z)
+http://192.168.160.11 | OPTIONS preflight | 404
+http://192.168.160.11 | origin=http://192.168.160.11 | POST login 200 | ACAO=

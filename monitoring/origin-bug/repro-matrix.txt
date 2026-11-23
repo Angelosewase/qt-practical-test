@@ -1,0 +1,16 @@
+# Origin bug reproduction (generated 2026-11-23T12:48:06Z). Test account only. Columns: target, origin sent, POST /api/auth/login status, body size, Access-Control-Allow-Origin, Vary
+http://192.168.160.11 | <none> | 200 | 359 bytes | - | -
+http://192.168.160.11 | http://192.168.160.11 | 200 | 359 bytes | - | -
+http://192.168.160.11 | http://192.168.160.11 | 200 | 359 bytes | - | -
+http://192.168.160.17:30080 | <none> | 200 | 359 bytes | - | -
+http://192.168.160.17:30080 | http://192.168.160.17:30080 | 403 | 0 bytes | - | -
+http://192.168.160.17:30080 | http://192.168.160.17 | 200 | 359 bytes | - | -
+http://192.168.160.33:30080 | <none> | 200 | 359 bytes | - | -
+http://192.168.160.33:30080 | http://192.168.160.33:30080 | 403 | 0 bytes | - | -
+http://192.168.160.33:30080 | http://192.168.160.33 | 200 | 359 bytes | - | -
+http://192.168.160.98:30080 | <none> | 200 | 359 bytes | - | -
+http://192.168.160.98:30080 | http://192.168.160.98:30080 | 403 | 0 bytes | - | -
+http://192.168.160.98:30080 | http://192.168.160.98 | 200 | 359 bytes | - | -
+# preflight
+http://192.168.160.11 | OPTIONS preflight | 404
+http://192.168.160.17:30080 | OPTIONS preflight | 403

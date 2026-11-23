@@ -1,0 +1,149 @@
+2026-11-23T12:56:18Z resilience-demo start: namespace=qt-spring-app node=192.168.160.17 nodeport=30080 normal api=2 valkey=1
+2026-11-23T12:56:18Z cluster context: kubernetes-admin@kubernetes
+
+2026-11-23T12:56:18Z === a. pods before ===
+2026-11-23T12:56:18Z $ kubectl -n qt-spring-app get pods -o wide
+2026-11-23T12:56:19Z   NAME                        READY   STATUS    RESTARTS   AGE     IP            NODE              NOMINATED NODE   READINESS GATES
+2026-11-23T12:56:19Z   api-85586bcdf9-5c4th        1/1     Running   0          7m38s   10.244.1.41   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:56:19Z   api-85586bcdf9-gmbvb        1/1     Running   0          7m25s   10.244.2.8    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:56:19Z   frontend-867884df48-8s8hr   1/1     Running   0          3h6m    10.244.1.4    c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:56:19Z   frontend-867884df48-k9v9h   1/1     Running   0          3h6m    10.244.2.3    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:56:19Z   gateway-74f5bd7fb5-q6cqk    1/1     Running   0          7m25s   10.244.2.9    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:56:19Z   gateway-74f5bd7fb5-wth9p    1/1     Running   0          7m38s   10.244.1.42   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:56:19Z   mongodb-0                   1/1     Running   0          3h6m    10.244.2.5    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:56:19Z   valkey-585589ff47-dk4hw     1/1     Running   0          84m     10.244.1.40   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:56:19Z $ kubectl -n qt-spring-app get deploy
+2026-11-23T12:56:19Z   NAME       READY   UP-TO-DATE   AVAILABLE   AGE
+2026-11-23T12:56:19Z   api        2/2     2            2           3h6m
+2026-11-23T12:56:19Z   frontend   2/2     2            2           3h6m
+2026-11-23T12:56:19Z   gateway    2/2     2            2           3h6m
+2026-11-23T12:56:19Z   valkey     1/1     1            1           3h6m
+2026-11-23T12:56:19Z API health before: {"status":"ok","database":"up","cache":"up"}
+2026-11-23T12:56:19Z --- phase a. pods before finished
+
+2026-11-23T12:56:19Z request loop started (pid 476644): GET http://192.168.160.17:30080/api/health every 0.2 s
+
+2026-11-23T12:56:19Z === b. scale the API to 3 replicas ===
+2026-11-23T12:56:25Z   API server stable (/readyz ok x3)
+2026-11-23T12:56:25Z $ kubectl -n qt-spring-app scale deploy/api --replicas=3
+2026-11-23T12:56:25Z   deployment.apps/api scaled
+2026-11-23T12:56:25Z $ kubectl -n qt-spring-app rollout status deploy/api --timeout=240s
+2026-11-23T12:56:39Z   Waiting for deployment "api" rollout to finish: 2 of 3 updated replicas are available...
+2026-11-23T12:56:39Z   deployment "api" successfully rolled out
+2026-11-23T12:56:39Z   Ready pods for app.kubernetes.io/name=api: 3 of 3
+2026-11-23T12:56:39Z $ kubectl -n qt-spring-app get pods -l app.kubernetes.io/name=api -o wide
+2026-11-23T12:56:39Z   NAME                   READY   STATUS    RESTARTS   AGE     IP            NODE              NOMINATED NODE   READINESS GATES
+2026-11-23T12:56:39Z   api-85586bcdf9-5c4th   1/1     Running   0          7m58s   10.244.1.41   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:56:39Z   api-85586bcdf9-8tvk7   1/1     Running   0          14s     10.244.1.43   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:56:39Z   api-85586bcdf9-gmbvb   1/1     Running   0          7m45s   10.244.2.8    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:56:39Z --- phase b. scale the API to 3 replicas finished
+
+2026-11-23T12:56:39Z === c. delete one API pod while the request loop runs ===
+2026-11-23T12:56:45Z   API server stable (/readyz ok x3)
+2026-11-23T12:56:45Z deleting pod api-85586bcdf9-5c4th (graceful: SIGTERM, then replacement)
+2026-11-23T12:56:45Z $ kubectl -n qt-spring-app delete pod api-85586bcdf9-5c4th --wait=false
+2026-11-23T12:56:46Z   pod "api-85586bcdf9-5c4th" deleted from qt-spring-app namespace
+2026-11-23T12:56:46Z $ kubectl -n qt-spring-app get pods -l app.kubernetes.io/name=api
+2026-11-23T12:56:46Z   NAME                   READY   STATUS        RESTARTS   AGE
+2026-11-23T12:56:46Z   api-85586bcdf9-5c4th   1/1     Terminating   0          8m5s
+2026-11-23T12:56:46Z   api-85586bcdf9-8tvk7   1/1     Running       0          21s
+2026-11-23T12:56:46Z   api-85586bcdf9-gmbvb   1/1     Running       0          7m52s
+2026-11-23T12:56:46Z   api-85586bcdf9-nrd72   0/1     Init:0/1      0          0s
+2026-11-23T12:56:51Z $ kubectl -n qt-spring-app get pods -l app.kubernetes.io/name=api
+2026-11-23T12:56:51Z   NAME                   READY   STATUS    RESTARTS   AGE
+2026-11-23T12:56:51Z   api-85586bcdf9-8tvk7   1/1     Running   0          26s
+2026-11-23T12:56:51Z   api-85586bcdf9-gmbvb   1/1     Running   0          7m57s
+2026-11-23T12:56:51Z   api-85586bcdf9-nrd72   0/1     Running   0          5s
+2026-11-23T12:56:56Z $ kubectl -n qt-spring-app get pods -l app.kubernetes.io/name=api
+2026-11-23T12:56:56Z   NAME                   READY   STATUS    RESTARTS   AGE
+2026-11-23T12:56:56Z   api-85586bcdf9-8tvk7   1/1     Running   0          31s
+2026-11-23T12:56:56Z   api-85586bcdf9-gmbvb   1/1     Running   0          8m2s
+2026-11-23T12:56:56Z   api-85586bcdf9-nrd72   0/1     Running   0          10s
+2026-11-23T12:57:01Z $ kubectl -n qt-spring-app get pods -l app.kubernetes.io/name=api
+2026-11-23T12:57:01Z   NAME                   READY   STATUS    RESTARTS   AGE
+2026-11-23T12:57:01Z   api-85586bcdf9-8tvk7   1/1     Running   0          36s
+2026-11-23T12:57:01Z   api-85586bcdf9-gmbvb   1/1     Running   0          8m7s
+2026-11-23T12:57:01Z   api-85586bcdf9-nrd72   1/1     Running   0          15s
+2026-11-23T12:57:06Z $ kubectl -n qt-spring-app get pods -l app.kubernetes.io/name=api
+2026-11-23T12:57:06Z   NAME                   READY   STATUS    RESTARTS   AGE
+2026-11-23T12:57:06Z   api-85586bcdf9-8tvk7   1/1     Running   0          41s
+2026-11-23T12:57:06Z   api-85586bcdf9-gmbvb   1/1     Running   0          8m12s
+2026-11-23T12:57:06Z   api-85586bcdf9-nrd72   1/1     Running   0          20s
+2026-11-23T12:57:11Z $ kubectl -n qt-spring-app get pods -l app.kubernetes.io/name=api
+2026-11-23T12:57:12Z   NAME                   READY   STATUS    RESTARTS   AGE
+2026-11-23T12:57:12Z   api-85586bcdf9-8tvk7   1/1     Running   0          46s
+2026-11-23T12:57:12Z   api-85586bcdf9-gmbvb   1/1     Running   0          8m17s
+2026-11-23T12:57:12Z   api-85586bcdf9-nrd72   1/1     Running   0          25s
+2026-11-23T12:57:17Z   Ready pods for app.kubernetes.io/name=api: 3 of 3
+2026-11-23T12:57:17Z $ kubectl -n qt-spring-app get pods -l app.kubernetes.io/name=api -o wide
+2026-11-23T12:57:17Z   NAME                   READY   STATUS    RESTARTS   AGE     IP            NODE              NOMINATED NODE   READINESS GATES
+2026-11-23T12:57:17Z   api-85586bcdf9-8tvk7   1/1     Running   0          52s     10.244.1.43   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:57:17Z   api-85586bcdf9-gmbvb   1/1     Running   0          8m23s   10.244.2.8    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:57:17Z   api-85586bcdf9-nrd72   1/1     Running   0          31s     10.244.1.44   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:57:17Z --- phase c. delete one API pod while the request loop runs finished
+
+2026-11-23T12:57:17Z === d. scale Valkey to 0 (cache outage) ===
+2026-11-23T12:57:22Z   API server not ready: Error from server (InternalError): an error on the server ("[+]ping ok\n[+]log ok\n[-]etcd failed: reason withheld\n[+]etcd-readiness ok\n[+]informer-sync ok\n[+]poststarthook/start-apiserver-admission-initializer ok\n[+]poststarthook/generic-apiserver-start-informers ok\n[+]poststarthook/priority-and-fairness-config-consumer ok\n[+]poststarthook/priority-and-fairness-filter ok\n[+]poststarthook/storage-object-count-tracker-hook ok\n[+]poststarthook/start-apiextensions-informers ok\n[+]poststarthook/start-apiextensions-controllers ok\n[+]poststarthook/crd-informer-synced ok\n[+]poststarthook/start-system-namespaces-controller ok\n[+]poststarthook/start-cluster-authentication-info-controller ok\n[+]poststarthook/start-kube-apiserver-identity-lease-controller ok\n[+]poststarthook/start-kube-apiserver-identity-lease-garbage-collector ok\n[+]poststarthook/start-legacy-token-tracking-controller ok\n[+]poststarthook/start-service-ip-repair-controllers ok\n[+]poststarthook/rbac/bootstrap-roles ok\n[+]poststarthook/scheduling/bootstrap-system-priority-classes ok\n[+]poststarthook/priority-and-fairness-config-producer ok\n[+]poststarthook/bootstrap-controller ok\n[+]poststarthook/aggregator-reload-proxy-client-cert ok\n[+]poststarthook/start-kube-aggregator-informers ok\n[+]poststarthook/apiservice-status-local-available-controller ok\n[+]poststarthook/apiservice-status-remote-available-controller ok\n[+]poststarthook/apiservice-registration-controller ok\n[+]poststarthook/apiservice-discovery-controller ok\n[+]poststarthook/kube-apiserver-autoregistration ok\n[+]autoregister-completion ok\n[+]poststarthook/apiservice-openapi-controller ok\n[+]poststarthook/apiservice-openapiv3-controller ok\n[+]shutdown ok\nreadyz check failed") has prevented the request from succeeding
+2026-11-23T12:57:33Z   API server stable (/readyz ok x3)
+2026-11-23T12:57:33Z $ kubectl -n qt-spring-app scale deploy/valkey --replicas=0
+2026-11-23T12:57:33Z   deployment.apps/valkey scaled
+2026-11-23T12:57:33Z $ kubectl -n qt-spring-app wait --for=delete pod -l app.kubernetes.io/name=valkey --timeout=120s
+2026-11-23T12:57:35Z   pod/valkey-585589ff47-dk4hw condition met
+2026-11-23T12:57:35Z   health sample 1 (cache down expected): {"status":"ok","database":"up","cache":"down"}   SPA /login: HTTP 200
+2026-11-23T12:57:37Z   health sample 2 (cache down expected): {"status":"ok","database":"up","cache":"down"}   SPA /login: HTTP 200
+2026-11-23T12:57:39Z   health sample 3 (cache down expected): {"status":"ok","database":"up","cache":"down"}   SPA /login: HTTP 200
+2026-11-23T12:57:42Z login as manager@qt.rw with the cache down: OK (token received, not shown)
+2026-11-23T12:57:42Z list projects with the cache down: HTTP 200, 1 project(s) returned
+2026-11-23T12:57:42Z $ kubectl -n qt-spring-app scale deploy/valkey --replicas=1
+2026-11-23T12:57:42Z   deployment.apps/valkey scaled
+2026-11-23T12:57:42Z $ kubectl -n qt-spring-app rollout status deploy/valkey --timeout=240s
+2026-11-23T12:57:59Z   Waiting for deployment "valkey" rollout to finish: 0 out of 1 new replicas have been updated...
+2026-11-23T12:57:59Z   Waiting for deployment "valkey" rollout to finish: 0 of 1 updated replicas are available...
+2026-11-23T12:57:59Z   deployment "valkey" successfully rolled out
+2026-11-23T12:57:59Z   Ready pods for app.kubernetes.io/name=valkey: 1 of 1
+2026-11-23T12:57:59Z API health after Valkey is back: {"status":"ok","database":"up","cache":"up"}
+2026-11-23T12:57:59Z --- phase d. scale Valkey to 0 (cache outage) finished
+
+2026-11-23T12:57:59Z === e. scale the API back to 2 replicas ===
+2026-11-23T12:58:06Z   API server stable (/readyz ok x3)
+2026-11-23T12:58:06Z $ kubectl -n qt-spring-app scale deploy/api --replicas=2
+2026-11-23T12:58:06Z   deployment.apps/api scaled
+2026-11-23T12:58:06Z $ kubectl -n qt-spring-app rollout status deploy/api --timeout=240s
+2026-11-23T12:58:06Z   deployment "api" successfully rolled out
+2026-11-23T12:58:06Z   Ready pods for app.kubernetes.io/name=api: 2 of 2
+2026-11-23T12:58:06Z $ kubectl -n qt-spring-app get pods -o wide
+2026-11-23T12:58:06Z   NAME                        READY   STATUS      RESTARTS   AGE     IP            NODE              NOMINATED NODE   READINESS GATES
+2026-11-23T12:58:06Z   api-85586bcdf9-8tvk7        1/1     Running     0          101s    10.244.1.43   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:58:06Z   api-85586bcdf9-gmbvb        1/1     Running     0          9m12s   10.244.2.8    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:58:06Z   api-85586bcdf9-nrd72        0/1     Completed   0          80s     10.244.1.44   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:58:06Z   frontend-867884df48-8s8hr   1/1     Running     0          3h8m    10.244.1.4    c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:58:06Z   frontend-867884df48-k9v9h   1/1     Running     0          3h8m    10.244.2.3    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:58:06Z   gateway-74f5bd7fb5-q6cqk    1/1     Running     0          9m12s   10.244.2.9    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:58:06Z   gateway-74f5bd7fb5-wth9p    1/1     Running     0          9m25s   10.244.1.42   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:58:06Z   mongodb-0                   1/1     Running     0          3h8m    10.244.2.5    c3-k8s-worker-1   <none>           <none>
+2026-11-23T12:58:06Z   valkey-585589ff47-95vkb     1/1     Running     0          24s     10.244.1.45   c3-k8s-worker-2   <none>           <none>
+2026-11-23T12:58:06Z --- phase e. scale the API back to 2 replicas finished
+
+2026-11-23T12:58:06Z === restore: Valkey to 1, API to 2 (runs on every exit) ===
+2026-11-23T12:58:06Z $ kubectl -n qt-spring-app scale deploy/valkey --replicas=1
+2026-11-23T12:58:06Z   deployment.apps/valkey scaled
+2026-11-23T12:58:06Z $ kubectl -n qt-spring-app scale deploy/api --replicas=2
+2026-11-23T12:58:06Z   deployment.apps/api scaled
+2026-11-23T12:58:06Z $ kubectl -n qt-spring-app rollout status deploy/valkey --timeout=240s
+2026-11-23T12:58:07Z   deployment "valkey" successfully rolled out
+2026-11-23T12:58:07Z $ kubectl -n qt-spring-app rollout status deploy/api --timeout=240s
+2026-11-23T12:58:07Z   deployment "api" successfully rolled out
+2026-11-23T12:58:07Z   Ready pods for app.kubernetes.io/name=valkey: 1 of 1
+2026-11-23T12:58:07Z   Ready pods for app.kubernetes.io/name=api: 2 of 2
+2026-11-23T12:58:07Z === request loop summary ===
+2026-11-23T12:58:07Z requests sent: 368   non-200 or failed: 0
+2026-11-23T12:58:07Z   phase a. pods before (2026-11-23T12:56:18Z .. 2026-11-23T12:56:19Z): requests=3 failed=0
+2026-11-23T12:58:07Z   phase b. scale the API to 3 replicas (2026-11-23T12:56:19Z .. 2026-11-23T12:56:39Z): requests=73 failed=0
+2026-11-23T12:58:07Z   phase c. delete one API pod while the request loop runs (2026-11-23T12:56:39Z .. 2026-11-23T12:57:17Z): requests=140 failed=0
+2026-11-23T12:58:07Z   phase d. scale Valkey to 0 (cache outage) (2026-11-23T12:57:17Z .. 2026-11-23T12:57:59Z): requests=140 failed=0
+2026-11-23T12:58:07Z   phase e. scale the API back to 2 replicas (2026-11-23T12:57:59Z .. 2026-11-23T12:58:06Z): requests=27 failed=0
+2026-11-23T12:58:07Z === verdict ===
+2026-11-23T12:58:07Z final state: api ready/spec=2/2  valkey ready/spec=1/1  health={"status":"ok","database":"up","cache":"up"}
+2026-11-23T12:58:07Z kubectl errors seen (each retried): 1
+2026-11-23T12:58:07Z failed phases: none
+2026-11-23T12:58:07Z RESULT: NOT CLEAN (see the messages above)

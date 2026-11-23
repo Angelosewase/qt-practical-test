@@ -7,6 +7,8 @@ set -uo pipefail
 BASE="${1:-${BASE_URL:-http://localhost}}"
 BASE="${BASE%/}"
 API="$BASE/api"
+ORIGIN="$BASE"
+BROWSER_UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 RUN="$(date +%s)"
 PASS=0
 FAIL=0
@@ -29,7 +31,12 @@ req() {
   local method="$1" path="$2" data="${3-}" token="${4-}" body_file
   body_file="$(mktemp)"
   local -a args=(-s -m 20 -o "$body_file" -w '%{http_code}' -X "$method" "$API$path")
+  args+=(-A "$BROWSER_UA" -H 'Accept: application/json, text/plain, */*')
   [[ -n "$token" ]] && args+=(-H "Authorization: Bearer $token")
+  # A browser sends Origin on every non-GET request made by the page. The API's CORS check depends on it (D-CORS-1).
+  if [[ "$method" != GET ]]; then
+    args+=(-H "Origin: $ORIGIN" -H "Referer: $ORIGIN/")
+  fi
   [[ -n "$data" ]] && args+=(-H 'Content-Type: application/json' --data "$data")
   CODE="$(curl "${args[@]}" 2>/dev/null || echo 000)"
   BODY="$(cat "$body_file")"
@@ -45,12 +52,29 @@ jqr() { printf '%s' "$BODY" | jq -r "$1" 2>/dev/null; }
 
 echo "$(ts) verify.sh against $BASE (run $RUN)"
 
-# ---- 1. reachability ---------------------------------------------------------
-home_code="$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$BASE/")"
-[[ "$home_code" == 200 ]] && check "frontend / returns 200" 0 "(HTTP $home_code)" || check "frontend / returns 200" 1 "(HTTP $home_code)"
-
-spa_code="$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$BASE/projects/123")"
-[[ "$spa_code" == 200 ]] && check "SPA fallback for /projects/123" 0 "(HTTP $spa_code)" || check "SPA fallback for /projects/123" 1 "(HTTP $spa_code)"
+# ---- 1. browser page routes (what a user opens; not covered by API calls) ----------
+# page_check NAME PATH EXPECTED_CONTENT_TYPE_PREFIX: 200 with the right content type, sent like a browser.
+page_check() {
+  local name="$1" path="$2" want="$3" code ct
+  code="$(curl -s -o /dev/null -m 20 -A "$BROWSER_UA" -H 'Accept: text/html,application/xhtml+xml,*/*;q=0.8' -w '%{http_code}' "$BASE$path")"
+  ct="$(curl -s -o /dev/null -m 20 -A "$BROWSER_UA" -H 'Accept: text/html,application/xhtml+xml,*/*;q=0.8' -w '%{content_type}' "$BASE$path")"
+  if [[ "$code" == 200 && "$ct" == "$want"* ]]; then
+    check "page $name ($path) returns 200 $want" 0 "(HTTP $code, $ct)"
+  else
+    check "page $name ($path) returns 200 $want" 1 "(HTTP $code, $ct)"
+  fi
+}
+page_check "home" / text/html
+page_check "login" /login text/html
+page_check "register" /register text/html
+page_check "dashboard route" /dashboard text/html
+page_check "deep SPA route" /projects/123 text/html
+ASSET="$(curl -s -m 20 -A "$BROWSER_UA" "$BASE/" | grep -o 'src="[^"]*\.js"' | head -1 | sed 's/^src="//; s/"$//')"
+if [[ -n "$ASSET" ]]; then
+  page_check "static script from index.html" "$ASSET" application/javascript
+else
+  check "static script referenced by index.html" 1 "(no .js reference found)"
+fi
 
 req GET /health
 expect "api health returns 200" 200
@@ -147,6 +171,13 @@ expect "user B still cannot open the project after sharing with A" 404
 
 req GET /projects "" "$TOKEN_ADMIN"
 printf '%s' "$BODY" | jq -e --arg id "$PID" 'any(.[]; .id == $id)' >/dev/null && check "admin sees every project (documented rule)" 0 "" || check "admin sees every project (documented rule)" 1 ""
+
+# ---- 6b. the origin rule stays on: an origin that is not listed is refused ---------
+ORIGIN_SAVED="$ORIGIN"
+ORIGIN="http://evil.example"
+req POST /auth/login '{"email":"manager@qt.rw","password":"Manager@123"}'
+expect "login from an unlisted origin is refused (no wildcard)" 403
+ORIGIN="$ORIGIN_SAVED"
 
 # ---- 7. cleanup of the test project ------------------------------------------
 req DELETE "/projects/$PID" "" "$TOKEN_M"

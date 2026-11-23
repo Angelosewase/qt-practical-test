@@ -411,6 +411,15 @@ Kubernetes NodePort, http://192.168.160.17:30080:
 ![Kubernetes project list](monitoring/app-k8s-project.png)
 
 
+## Troubleshooting: login returns 403
+
+Symptom: the login page loads, but submitting the form returns HTTP 403 from the API. Cause (D-CORS-1): the API only
+accepts browser origins that are listed in `CORS_ORIGINS` (or that match the request's Host). The NodePort origin includes
+the port, so it has to be listed explicitly. The list is set in `k8s/10-config.yaml` and `docker/docker-compose.yml`.
+
+Check: `curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Origin: http://<node-ip>:30080' -H 'Content-Type: application/json' -d '{"email":"manager@qt.rw","password":"Manager@123"}' http://<node-ip>:30080/api/auth/login` must return 200.
+To add a new address, add its exact origin to both lists and run `make k8s-deploy` (or `make ansible-run` for Compose).
+
 ## Repository layout
 
 See [docs/STRUCTURE.md](docs/STRUCTURE.md) for the full tree. Decisions are in [docs/DECISIONS.md](docs/DECISIONS.md),

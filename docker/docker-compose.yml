@@ -65,6 +65,8 @@ services:
       MONGO_CONNECT_TIMEOUT: 60s
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      # Explicit browser origins (no wildcard). Same list as the Kubernetes ConfigMap (D-CORS-1).
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://192.168.160.11,http://192.168.160.17:30080,http://192.168.160.33:30080,http://192.168.160.98:30080}
       SEED_ENABLED: ${SEED_ENABLED:-true}
       CACHE_ENABLED: "true"
       VALKEY_ADDR: valkey:6379

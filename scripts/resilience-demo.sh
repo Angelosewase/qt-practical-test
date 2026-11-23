@@ -208,8 +208,10 @@ phase_d() {
   kc wait --for=delete pod -l app.kubernetes.io/name=valkey --timeout=120s || log "  note: wait for Valkey pod deletion did not complete cleanly"
   for i in 1 2 3; do
     h="$(health_json)"
-    log "  health sample $i (cache down expected): $h"
+    page="$(curl -s -o /dev/null -m 10 -A 'Mozilla/5.0 (X11; Linux x86_64) Chrome/124.0' -H 'Accept: text/html' -w '%{http_code}' "$BASE/login")"
+    log "  health sample $i (cache down expected): $h   SPA /login: HTTP $page"
     printf '%s' "$h" | grep -q '"cache":"down"' && ok=$((ok + 1))
+    [[ "$page" == 200 ]] || FAILED_PHASES+=("d: SPA /login HTTP $page")
     sleep 2
   done
   if (( ok < 3 )); then

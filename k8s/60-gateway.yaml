@@ -19,6 +19,9 @@ spec:
       app.kubernetes.io/name: gateway
   template:
     metadata:
+      annotations:
+        # Rendered from k8s/10-config.yaml by scripts/k8s-render.sh: a config change rolls these pods.
+        checksum/config: "__CONFIG_HASH__"
       labels:
         app.kubernetes.io/name: gateway
     spec:
