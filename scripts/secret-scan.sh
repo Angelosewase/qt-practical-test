@@ -32,6 +32,20 @@ for key in $SECRET_KEYS; do
   count=$((count + 1))
 done
 
+# Application secrets generated into docker/.env (also used for the Kubernetes Secret and the Helm release).
+APP_ENV_FILE="docker/.env"
+APP_SECRET_KEYS="MONGO_ROOT_PASSWORD VALKEY_PASSWORD JWT_SECRET"
+if [[ -f "$APP_ENV_FILE" ]]; then
+  for key in $APP_SECRET_KEYS; do
+    value="$(grep -E "^${key}=" "$APP_ENV_FILE" | head -1 | cut -d= -f2- | tr -d "'\"" || true)"
+    if [[ -z "$value" || "$value" == \<* || "$value" == change-me* ]]; then
+      continue
+    fi
+    printf '%s\n' "$value" >>"$LITERALS"
+    count=$((count + 1))
+  done
+fi
+
 if [[ "$count" -eq 0 ]]; then
   echo "secret-scan: no secret values configured, refusing to pass blindly" >&2
   exit 1

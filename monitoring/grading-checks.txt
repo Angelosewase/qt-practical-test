@@ -1,0 +1,87 @@
+# Grading checks (generated 2026-11-23T13:16:20Z by the laptop, read-only). No secret values are printed.
+
+## 1. Multi-stage Dockerfiles (FROM lines)
+docker/api.Dockerfile:5:FROM golang:1.23.12-alpine3.21 AS build
+docker/api.Dockerfile:17:FROM alpine:3.21.10 AS runtime
+docker/frontend.Dockerfile:5:FROM node:20.19.6-alpine3.21 AS build
+docker/frontend.Dockerfile:17:FROM nginxinc/nginx-unprivileged:1.27.5-alpine AS runtime
+
+## 2. Docker Hub tags (read back from the registry)
+angelsewase/projecthub-api: 1.0.0
+angelsewase/projecthub-frontend: 1.0.0
+
+## 3. Compose on c3-docker-host: images, state and published ports (only nginx publishes a host port)
+c3-docker-host
+SERVICE    IMAGE                                   STATUS                    PORTS
+api        angelsewase/projecthub-api:1.0.0        Up 25 minutes (healthy)   8080/tcp
+frontend   angelsewase/projecthub-frontend:1.0.0   Up 4 hours (healthy)      8080/tcp
+mongodb    mongo:7.0.14                            Up 4 hours (healthy)      27017/tcp
+nginx      nginx:1.27.5-alpine                     Up 4 hours (healthy)      0.0.0.0:80->80/tcp, [::]:80->80/tcp
+valkey     valkey/valkey:8.1.12-alpine             Up 4 hours (healthy)      6379/tcp
+
+named volumes:
+projecthub-mongo-data
+
+## 4. Compose cache requires a password (ping without credentials, then with them)
+no password:   NOAUTH Authentication required.
+
+with password: PONG
+
+## 5. Kubernetes: resource kinds in namespace qt-spring-app (Secret names only, no data)
+NAME            STATUS   AGE
+qt-spring-app   Active   3h26m
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/api        2/2     2            2           3h26m
+deployment.apps/frontend   2/2     2            2           3h26m
+deployment.apps/gateway    2/2     2            2           3h26m
+deployment.apps/valkey     1/1     1            1           3h26m
+
+NAME                       READY   AGE
+statefulset.apps/mongodb   1/1     3h26m
+
+NAME               TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+service/api        ClusterIP   10.102.197.195   <none>        8080/TCP       3h26m
+service/frontend   ClusterIP   10.102.167.59    <none>        8080/TCP       3h26m
+service/gateway    NodePort    10.104.176.69    <none>        80:30080/TCP   3h26m
+service/mongodb    ClusterIP   10.104.50.191    <none>        27017/TCP      3h26m
+service/valkey     ClusterIP   10.98.59.92      <none>        6379/TCP       3h26m
+
+NAME                         DATA   AGE
+configmap/api-config         13     3h26m
+configmap/gateway-nginx      1      3h26m
+configmap/kube-root-ca.crt   1      3h26m
+
+NAME                               STATUS   VOLUME                  CAPACITY   ACCESS MODES   STORAGECLASS       VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/mongo-data   Bound    projecthub-mongo-data   10Gi       RWO            projecthub-local   <unset>                 3h26m
+secret/app-secrets
+PV                      CAPACITY   CLAIM        NODE-LABEL
+projecthub-mongo-data   10Gi       mongo-data   projecthub/storage
+
+## 6. Kubernetes: requests and limits on every container (init containers included)
+api       init wait-for-mongodb  requests={'cpu': '10m', 'memory': '16Mi'} limits={'cpu': '100m', 'memory': '32Mi'}
+api       main api               requests={'cpu': '100m', 'memory': '128Mi'} limits={'cpu': '1', 'memory': '512Mi'}
+frontend  main frontend          requests={'cpu': '50m', 'memory': '64Mi'} limits={'cpu': '200m', 'memory': '128Mi'}
+gateway   main nginx             requests={'cpu': '50m', 'memory': '64Mi'} limits={'cpu': '200m', 'memory': '128Mi'}
+valkey    main valkey            requests={'cpu': '50m', 'memory': '64Mi'} limits={'cpu': '500m', 'memory': '256Mi'}
+mongodb   init fix-data-dir      requests={'cpu': '10m', 'memory': '32Mi'} limits={'cpu': '100m', 'memory': '64Mi'}
+mongodb   main mongodb           requests={'cpu': '250m', 'memory': '512Mi'} limits={'cpu': '1', 'memory': '1Gi'}
+
+## 7. Kubernetes: probes on the API and frontend, and the API heap limit
+api readinessProbe {'path': '/api/health', 'port': 'http', 'scheme': 'HTTP'}
+api livenessProbe {'path': '/api/health', 'port': 'http', 'scheme': 'HTTP'}
+api GOMEMLIMIT 400MiB (memory limit 512Mi)
+frontend readinessProbe {'path': '/', 'port': 'http', 'scheme': 'HTTP'}
+frontend livenessProbe {'path': '/', 'port': 'http', 'scheme': 'HTTP'}
+
+## 8. Kubernetes cache requires a password
+no password:   NOAUTH Authentication required.
+
+with password: PONG
+
+## 9. Health on both deployments
+http://192.168.160.11/api/health -> {"status":"ok","database":"up","cache":"up"}
+http://192.168.160.17:30080/api/health -> {"status":"ok","database":"up","cache":"up"}
+http://192.168.160.33:30080/api/health -> {"status":"ok","database":"up","cache":"up"}
+http://192.168.160.98:30080/api/health -> {"status":"ok","database":"up","cache":"up"}
+
+# end 2026-11-23T13:16:24Z

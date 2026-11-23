@@ -76,6 +76,10 @@ spec:
             - name: VALKEY_PASSWORD
               valueFrom:
                 secretKeyRef: {name: app-secrets, key: VALKEY_PASSWORD}
+            # Go's equivalent of the brief's "JVM heap must fit within its limit": a soft heap limit at about 80%
+            # of the 512Mi container limit, so the garbage collector works harder before the kernel OOM-kills the pod.
+            - name: GOMEMLIMIT
+              value: "400MiB"
           readinessProbe:
             httpGet:
               path: /api/health
