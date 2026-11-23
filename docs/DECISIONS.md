@@ -338,7 +338,7 @@ The loop sleeps 0.2 s after each request. Each request takes a few tens of milli
 
 ## D-MON-1. metrics-server v0.9.1, vendored, with --kubelet-insecure-tls
 
-`kubectl top` needs metrics-server. Installed by the role `k8s_metrics`, pinned to v0.9.1, the current release (checked against the GitHub API). The manifest is vendored unmodified in `ansible/files/metrics-server-v0.9.1.yaml`, and the patch is applied by `lineinfile` on the copy in `/etc/kubernetes/addons/`. The patch adds `--kubelet-insecure-tls` because kubeadm kubelets serve self-signed certificates. Tradeoff: the kubelet's certificate is not verified for metrics scraping. A production cluster would issue kubelet serving certificates and approve their CSRs. For a single-tenant exam cluster on a private network, the risk is accepted and recorded here. The role waits until `kubectl top nodes` returns three rows.
+`kubectl top` needs metrics-server. Installed by the role `k8s_metrics`, pinned to v0.9.1, the current release (checked against the GitHub API). The manifest is vendored as `ansible/files/metrics-server-v0.9.1-insecure-tls.yaml`: the upstream file with one documented added line. (The first version patched a copy with `lineinfile` on every run, which was not idempotent; see D-ANS-7.) The patch adds `--kubelet-insecure-tls` because kubeadm kubelets serve self-signed certificates. Tradeoff: the kubelet's certificate is not verified for metrics scraping. A production cluster would issue kubelet serving certificates and approve their CSRs. For a single-tenant exam cluster on a private network, the risk is accepted and recorded here. The role waits until `kubectl top nodes` returns three rows.
 
 ## D-MON-2. Collection is read-only and runs from the laptop
 
@@ -350,11 +350,11 @@ Cache memory, hits and misses, and key counts are read with the container's own 
 
 ## D-MON-4. Screenshots are taken by hand
 
-The brief requires screenshots of the real VMs, the real browser and the real master, so they cannot be generated. `monitoring/SCREENSHOTS.md` lists all 37 captures with their filenames, the VM, and copy-paste commands. The README already embeds them, so they render when added.
+The brief requires screenshots of the real VMs, the real browser and the real master, so they cannot be generated. The owner took them. They are in `monitoring/screenshots/`, and the README embeds every one with a caption that names the command. The capture checklist that guided them (`monitoring/SCREENSHOTS.md`) was removed before submission (docs/CLEANUP.md).
 
 ## D-MON-5. Final verification and IP check
 
-`scripts/verify.sh` ran against both URLs (34 of 34 each), saved in `monitoring/final-verify.txt`. For IPs, `make tf-output` reads only the Terraform state, so it cannot show a DHCP change by itself. The check that matters is the address each VM reports for itself. Those match the state exactly (table in WORKLOG), so no IP has changed. `make tf-apply` was not run.
+`scripts/verify.sh` ran against both URLs (34 of 34 each at the time; after D-VERIFY-1 the script has 39 checks, and `monitoring/final-verify.txt` holds the 39-of-39 run on all four URLs). For IPs, `make tf-output` reads only the Terraform state, so it cannot show a DHCP change by itself. The check that matters is the address each VM reports for itself. Those match the state exactly (table in WORKLOG), so no IP has changed. `make tf-apply` was not run.
 
 ## D-K8S-19. Valkey probes are TCP, not exec
 
@@ -434,3 +434,16 @@ Phase d now requests `/login` with a browser User-Agent on each cache-down healt
 ## D-ANS-7. Metrics-server is idempotent (correction of an earlier role)
 
 The role `k8s_metrics` copied the unpatched manifest and then patched it with `lineinfile`, so every run changed the file and reapplied it. It now uses one vendored file that carries the single documented change (`--kubelet-insecure-tls`), so the copy is idempotent. `kubectl apply` also prints `configured` when only its stored last-applied text differs. Verified: `generation` and `resourceVersion` stayed the same, so nothing on the cluster changed. The role therefore gates the apply on `kubectl diff` (exit 0 = no change, 1 = change). Playbook runs after the fix report `changed=0` on every host.
+
+## D-K8S-20. GOMEMLIMIT stands in for the brief's JVM heap rule
+
+The brief asks that the Spring Boot JVM heap fit within its container limit. The API is Go, which has no fixed heap size, but it has the same kind of soft limit: `GOMEMLIMIT`. It is set to `400MiB` on the API container, about 80% of its 512Mi memory limit. The garbage collector works harder as the heap approaches that value, so it frees memory before the kernel OOM-kills the pod, and the rest leaves room for goroutine stacks and runtime overhead. The value is set in `k8s/40-api.yaml` next to the limit it depends on, not in the ConfigMap, so a change to it only rolls the API. Compose was not changed: the brief states the heap rule only for Kubernetes, and changing Compose would mean redeploying the Docker host for no functional gain.
+
+## D-SEC-1. The secret scan also covers the generated app secrets
+
+`scripts/secret-scan.sh` originally compared files only against the four values in `.private/secrets.env`. The application secrets (`MONGO_ROOT_PASSWORD`, `VALKEY_PASSWORD`, `JWT_SECRET`) are generated into `docker/.env` and feed the Kubernetes Secret. The Helm release uses them too. The scan now loads those three values when `docker/.env` exists, so a value copied into a chart, a log or a doc is caught before commit.
+
+## D-DOC-1. Submission cleanup
+
+Before submission the repo was checked file by file against the Makefile, the scripts and the docs. Superseded snapshots and the owner's capture checklist were removed, and five screenshots were renamed so their names match their content. Every remaining screenshot is embedded in the README. The full list with reasons is in `docs/CLEANUP.md`. The tag `v1-required` marks the state before cleanup.
+
