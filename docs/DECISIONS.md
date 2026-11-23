@@ -258,9 +258,15 @@ The Kali kernel is 7.1.5, newer than Kubernetes 1.32's tested LTS kernels. The c
 
 `/home/devops/.kube/config` is a copy of the cluster admin config, owned by devops with mode 0600. Verified by logging in as devops over SSH and running `kubectl get nodes`. Copying the admin credential to a login user is acceptable on this single-tenant exam cluster. The tradeoff is that devops has cluster-admin rights, and this is noted.
 
-## D-CL-7. Password step is separate from the cluster build
+## D-CL-7. devops password, set through Ansible and verified with PAM
 
-The devops password step (`roles/vm_access`) is in the playbook, tagged `vm_access`. It needs `VM_PASSWORD` in `.private/secrets.env`. That value was empty when the cluster was built, so this run used `--skip-tags vm_access`. The password is applied with `chpasswd` from stdin, with `no_log`. It is compared by hash first, so reruns change nothing when the password matches. The comparison logic was tested locally with a known match and a wrong value. Password login is enabled through `/etc/ssh/sshd_config.d/10-exam-access.conf` (validated with `sshd -t` before reload), and key login stays enabled.
+The password step (`roles/vm_access`, tag `vm_access`) reads `VM_PASSWORD` from the environment (`make ansible-run` sources `.private/secrets.env`). It sets the password with `chpasswd`, value on stdin, with `no_log`, so the value never appears in arguments or logs.
+
+Idempotency: Kali hashes passwords with yescrypt (`$y$`). Recomputing a SHA-512 hash, as the first draft did, can never match, so the password was reset on every run (run 8, found and fixed). The current check runs `unix_chkpwd`, the PAM helper that sshd and su use, with the password on stdin terminated by NUL. It returns 0 for the right password and 7 for a wrong one (tested on the VM). The password is set only when the check fails.
+
+Verified: password login as devops works (`Authenticated ... using "password"`), and key login still works with password authentication disabled. Run 9 reported `changed=0` on all hosts, including the password task.
+
+Password login is enabled through `/etc/ssh/sshd_config.d/10-exam-access.conf`, validated with `sshd -t` before reload. Key login stays enabled.
 
 ## D-CL-8. Terraform and the password
 

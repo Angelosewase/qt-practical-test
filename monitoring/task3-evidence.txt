@@ -82,3 +82,38 @@ c3-k8s-worker-2            : ok=24   changed=3    unreachable=0    failed=0    s
         "c3-k8s-worker-2   Ready    <none>          2m42s   v1.32.5   192.168.160.98   <none>        Kali GNU/Linux Rolling   7.1.5+kali-cloud-amd64   containerd://2.1.9+unknown"
 TASK [k8s_verify : Count Ready nodes (must be the three cluster nodes)] ********
 TASK [k8s_verify : Assert three Ready nodes] ***********************************
+
+
+## 6. Devops password step (Ansible vm_access, no_log)
+Password source: VM_PASSWORD in .private/secrets.env, passed through the environment by `make ansible-run`.
+The value is never printed or stored in a tracked file.
+- Verification method: `unix_chkpwd` (the PAM helper that sshd and su use). A correct password returns 0 and a wrong one returns 7. Tested on c3-docker-host before it was used in the role.
+- Kali hashes passwords with yescrypt ($y$). An earlier draft recomputed a SHA-512 hash, which could never match and reset the password on every run. Found in run 8 and fixed.
+
+### Run 7: password set (first use of VM_PASSWORD)
+PLAY RECAP *********************************************************************
+c3-docker-host             : ok=7    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+c3-k8s-master              : ok=41   changed=3    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
+c3-k8s-worker-1            : ok=28   changed=3    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+c3-k8s-worker-2            : ok=28   changed=3    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+
+### Run 8: exposed the SHA-512 comparison bug (password reset again, changed=1 per host). Fixed; not a result to rely on.
+PLAY RECAP *********************************************************************
+c3-docker-host             : ok=6    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+c3-k8s-master              : ok=40   changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
+c3-k8s-worker-1            : ok=27   changed=1    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+c3-k8s-worker-2            : ok=27   changed=1    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+
+### Run 9: full playbook, idempotency proof after the password fix (changed=0 on every host, no handlers)
+PLAY RECAP *********************************************************************
+c3-docker-host             : ok=5    changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+c3-k8s-master              : ok=39   changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+c3-k8s-worker-1            : ok=26   changed=0    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0   
+c3-k8s-worker-2            : ok=26   changed=0    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0
+
+handlers_run=0
+
+## 7. Login checks from the laptop (no secrets printed)
+- Password login as devops to 192.168.160.11 (password authentication only, key disabled): `Authenticated to 192.168.160.11 using "password"`, then `logged_in_as=devops host=c3-docker-host`.
+- Key login as devops to 192.168.160.11 with password authentication disabled (`.private/ssh/id_ed25519`): `logged_in_as=devops host=c3-docker-host sudo=yes`.
+- sshd drop-in `/etc/ssh/sshd_config.d/10-exam-access.conf` is validated with `sshd -t` on every host before reload.
